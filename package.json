@@ -1,0 +1,13 @@
+{
+  "name": "buildless",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild . --bundle > www/index.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.17.15",
+    "typescript": "^5.0.3"
+  }
+}
