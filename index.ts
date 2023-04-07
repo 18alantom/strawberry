@@ -1,52 +1,60 @@
 type Primitive = boolean | symbol | string | number | bigint | undefined;
 type Complex = object | Function;
 
-type R = { __prefix: string };
+type R = { __sb_prefix: string; __sb_dependencies?: number };
 type Reactive<T> = T extends Complex ? T & R : never;
 
-function reactive<T extends Primitive | Complex>(
-  obj: T,
-  prefix: string
-): T | Reactive<T> {
-  if (obj == null) {
-    return obj;
-  }
+type Watcher = (newValue: unknown) => unknown;
 
-  if (typeof obj === 'function') {
-    return _makeReactive(obj, prefix);
-  }
+const attr = {
+  inner: 'sb-inner',
+} as const;
+const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
-  if (typeof obj === 'object') {
-    return _makeReactive(obj, prefix);
+function reactive<T extends any>(obj: T, prefix: string): T | Reactive<T> {
+  if (obj && typeof obj === 'object') {
+    return proxy(obj, prefix);
   }
 
   return obj;
 }
 
-function _makeReactive<O extends Function | object>(
+function proxy<O extends Function | object>(
   obj: O,
   prefix: string
 ): Reactive<O> {
   type K = keyof O;
 
-  for (const key of Object.keys(obj)) {
-    if (typeof key === 'symbol') {
-      continue;
-    }
-
-    const value = obj[key as K] as Primitive | Complex;
-    const newprefix = prefix === '' ? key : prefix + '.' + key;
-
-    obj[key as K] = reactive(value, newprefix) as O[K];
+  for (const prop of Object.keys(obj)) {
+    const newprefix = ReactivityHandler.getKey(prop, prefix);
+    const value = obj[prop as K];
+    obj[prop as K] = reactive(value, newprefix) as O[K];
   }
 
-  Object.defineProperty(obj, '__prefix', { value: prefix, enumerable: false });
+  Object.defineProperty(obj, '__sb_prefix', {
+    value: prefix,
+    enumerable: false,
+  });
+
   return new Proxy(obj, ReactivityHandler) as Reactive<O>;
 }
 
-type Watcher = (newValue: unknown) => unknown;
 class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   static watchers: Record<string, Watcher[]> = {};
+  static dependents: Record<string, { key: string; computed: Function }[]> = {};
+
+  static get(
+    target: Reactive<object>,
+    prop: string | symbol,
+    receiver: any
+  ): any {
+    const value = Reflect.get(target, prop, receiver);
+    if (value?.__sb_dependencies) {
+      return value();
+    }
+
+    return value;
+  }
 
   static set(
     target: Reactive<object>,
@@ -58,12 +66,16 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       return Reflect.set(target, prop, value, receiver);
     }
 
-    const key = target.__prefix === '' ? prop : target.__prefix + '.' + prop;
+    const key = this.getKey(prop, target.__sb_prefix);
     const reactiveValue = reactive(value, key);
+    if (typeof value === 'function') {
+      this.handleComputed(value, key);
+    }
 
-    console.log('set', { target, prop, key, value, receiver });
+    const success = Reflect.set(target, prop, reactiveValue, receiver);
     this.update(key, value);
-    return Reflect.set(target, prop, reactiveValue, receiver);
+    this.updateDependencies(key, target);
+    return success;
   }
 
   static update(key: string, newValue: unknown) {
@@ -71,28 +83,110 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       watcher(newValue);
     }
 
-    const query = `[key='${key}']`;
+    if (typeof newValue === 'function') {
+      newValue = newValue();
+    }
+
+    const query = `[${attr.inner}='${key}']`;
     for (const el of document.querySelectorAll(query)) {
-      el.innerHTML = String(newValue);
+      // @ts-ignore
+      el.innerText = String(newValue);
     }
   }
 
-  static watch(key: string, watcher: Watcher) {
-    this.watchers[key] ??= [];
-    this.watchers[key].push(watcher);
+  static updateDependencies(key: string, target: any) {
+    const deps = this.dependents[key] ?? [];
+    for (const { key, computed } of deps) {
+      this.update(key, computed);
+    }
+  }
+
+  static handleComputed(value: Function, key: string) {
+    const fstring = value.toString();
+    Object.defineProperty(value, '__sb_dependencies', {
+      value: 0,
+      enumerable: false,
+      writable: true,
+    });
+
+    for (const matches of fstring.matchAll(dependencyRegex)) {
+      const dep = matches[0]?.replace('?.', '.');
+      if (!dep) {
+        continue;
+      }
+
+      const sidx = dep.indexOf('.') + 1;
+      const dkey = dep.slice(sidx);
+      this.dependents[dkey] ??= [];
+      this.dependents[dkey].push({ key, computed: value });
+      (value as Reactive<Function>).__sb_dependencies! += 1;
+    }
+  }
+
+  static getKey(prop: string, prefix: string) {
+    if (prefix === '') {
+      return prop;
+    }
+
+    return prefix + '.' + prop;
   }
 }
 
-// @ts-ignore
-window.data = reactive({}, '');
+function watch(key: string, watcher: Watcher) {
+  ReactivityHandler.watchers[key] ??= [];
+  ReactivityHandler.watchers[key].push(watcher);
+}
 
-// @ts-ignore
-window.watch = ReactivityHandler.watch.bind(ReactivityHandler);
+function unwatch(key: string, watcher?: Watcher) {
+  if (!watcher) {
+    delete ReactivityHandler.watchers[key];
+    return;
+  }
+
+  const watchers = ReactivityHandler.watchers[key] ?? [];
+  ReactivityHandler.watchers[key] = watchers.filter((w) => w !== watcher);
+}
+
+function init(initData: object = {}) {
+  const data = reactive(initData, '');
+  document.addEventListener('DOMContentLoaded', () =>
+    contentLoadedCallback(data)
+  );
+  return data;
+}
+
+function contentLoadedCallback(data: unknown) {
+  for (const el of document.querySelectorAll(`[${attr.inner}]`)) {
+    const key = el.getAttribute(attr.inner);
+    // TODO: Complete this function
+  }
+}
+
+function getValue(key: string, value: any) {
+  for (const k of key.split('.')) {
+    const tval = typeof value;
+    if (value === null || (tval !== 'function' && tval !== 'object')) {
+      return undefined;
+    }
+
+    value = Reflect.get(value, k);
+  }
+
+  return value;
+}
+
+window.init = init;
+window.watch = watch;
+window.unwatch = unwatch;
 
 /**
  * TODO:
- * - Input Elements (two way binding)
- * - Composiblity
- * - Computed Values
- * - Arrays
+ * - [ ] Composiblity
+ * - [ ] Loops
+ * - [ ] Conditionals
+ * - [ ] Styling
+ * - [ ] Input Elements (two way binding)
+ * - [ ] Initialization: values are set after page loads
+ * - [?] Cache computed
+ * - [x] Computed Values
  */
