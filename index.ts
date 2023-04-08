@@ -214,6 +214,8 @@ window.unwatch = unwatch;
  * - [ ] Styling
  * - [ ] Input Elements (two way binding)
  * - [ ] Initialization: values are set after page loads
+ * - [ ] Variable prefix
+ * - [ ] Todo App and async
  * - [x] Composiblity templates and slots
  * - [?] Cache computed
  * - [x] Computed Values
