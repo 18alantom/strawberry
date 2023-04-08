@@ -8,6 +8,8 @@ type Watcher = (newValue: unknown) => unknown;
 
 const attr = {
   innerText: 'sb-inner',
+  loop: 'sb-loop',
+  child: 'sb-child',
 } as const;
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -87,10 +89,30 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       newValue = newValue();
     }
 
-    const query = `[${attr.innerText}='${key}']`;
-    for (const el of document.querySelectorAll(query)) {
+    const innerTextQuery = `[${attr.innerText}='${key}']`;
+    for (const el of document.querySelectorAll(innerTextQuery)) {
       // @ts-ignore
       el.innerText = String(newValue);
+    }
+
+    if (!Array.isArray(newValue)) {
+      return;
+    }
+
+    const loopQuery = `[${attr.loop}='${key}']`;
+    for (const el of document.querySelectorAll(loopQuery)) {
+      const child = el.getAttribute(attr.child);
+      if (!child) {
+        continue;
+      }
+
+      // FIXME: Prevent duplicate elements
+      for (const i in newValue) {
+        const item = newValue[i];
+        const childEl = document.createElement(child);
+        childEl.innerText = item;
+        el.appendChild(childEl);
+      }
     }
   }
 
@@ -191,11 +213,11 @@ function getValue(key: string, value: any) {
 }
 
 function createComponent(name: string, template: HTMLTemplateElement) {
-  const element = template.content.children[0].cloneNode(true);
   const component = class extends HTMLElement {
     constructor() {
       super();
       const shadow = this.attachShadow({ mode: 'open' });
+      const element = template.content.children[0].cloneNode(true);
       shadow.appendChild(element);
     }
   };
@@ -211,10 +233,12 @@ window.unwatch = unwatch;
  * TODO:
  * - [ ] Loops v-for
  * - [ ] Conditionals v-if
+ * - [ ] Watch array changes
  * - [ ] Styling
  * - [ ] Input Elements (two way binding)
  * - [ ] Initialization: values are set after page loads
  * - [ ] Variable prefix
+ * - [ ] Reactivity for all props
  * - [ ] Todo App and async
  * - [x] Composiblity templates and slots
  * - [?] Cache computed
