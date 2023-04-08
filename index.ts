@@ -8,6 +8,8 @@ type Watcher = (newValue: unknown) => unknown;
 
 const attr = {
   innerText: 'sb-inner',
+  // Loop Attributes
+  idx: 'sb-idx',
   loop: 'sb-loop',
   child: 'sb-child',
 } as const;
@@ -81,38 +83,41 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static update(key: string, newValue: unknown) {
-    for (const watcher of this.watchers?.[key] ?? []) {
-      watcher(newValue);
-    }
-
     if (typeof newValue === 'function') {
       newValue = newValue();
     }
 
+    // Trigger Watchers
+    for (const watcher of this.watchers?.[key] ?? []) {
+      watcher(newValue);
+    }
+
+    // Set innerText
     const innerTextQuery = `[${attr.innerText}='${key}']`;
     for (const el of document.querySelectorAll(innerTextQuery)) {
-      // @ts-ignore
-      el.innerText = String(newValue);
+      if (el instanceof HTMLElement) {
+        el.innerText = String(newValue);
+      }
     }
 
     if (!Array.isArray(newValue)) {
       return;
     }
 
+    // Handle Arrays
     const loopQuery = `[${attr.loop}='${key}']`;
     for (const el of document.querySelectorAll(loopQuery)) {
-      const child = el.getAttribute(attr.child);
-      if (!child) {
+      const childTag = el.getAttribute(attr.child);
+      if (!childTag) {
         continue;
       }
 
-      // FIXME: Prevent duplicate elements
-      for (const i in newValue) {
-        const item = newValue[i];
-        const childEl = document.createElement(child);
-        childEl.innerText = item;
-        el.appendChild(childEl);
-      }
+      const children = newValue.map((item) => {
+        const child = document.createElement(childTag);
+        child.innerText = item;
+        return child;
+      });
+      el.replaceChildren(...children);
     }
   }
 
