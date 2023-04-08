@@ -4,7 +4,7 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "build": "esbuild . --bundle > index.js"
+    "tojs": "esbuild . --bundle > index.js"
   },
   "devDependencies": {
     "esbuild": "^0.17.15",
