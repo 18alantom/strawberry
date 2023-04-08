@@ -7,7 +7,7 @@ type Reactive<T> = T extends Complex ? T & R : never;
 type Watcher = (newValue: unknown) => unknown;
 
 const attr = {
-  inner: 'sb-inner',
+  innerText: 'sb-inner',
 } as const;
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -87,7 +87,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       newValue = newValue();
     }
 
-    const query = `[${attr.inner}='${key}']`;
+    const query = `[${attr.innerText}='${key}']`;
     for (const el of document.querySelectorAll(query)) {
       // @ts-ignore
       el.innerText = String(newValue);
@@ -149,15 +149,30 @@ function unwatch(key: string, watcher?: Watcher) {
 
 function init(initData: object = {}) {
   const data = reactive(initData, '');
-  document.addEventListener('DOMContentLoaded', () =>
-    contentLoadedCallback(data)
-  );
+
+  createComponents();
+  document.addEventListener('DOMContentLoaded', () => {
+    setInitialValues(data);
+  });
+
   return data;
 }
 
-function contentLoadedCallback(data: unknown) {
-  for (const el of document.querySelectorAll(`[${attr.inner}]`)) {
-    const key = el.getAttribute(attr.inner);
+function createComponents() {
+  for (const template of document.getElementsByTagName('template')) {
+    const name = template.getAttribute('name');
+    if (!name) {
+      continue;
+    }
+
+    createComponent(name, template);
+  }
+}
+
+function setInitialValues(data: unknown) {
+  for (const el of document.querySelectorAll(`[${attr.innerText}]`)) {
+    const key = el.getAttribute(attr.innerText);
+    data;
     // TODO: Complete this function
   }
 }
@@ -175,18 +190,31 @@ function getValue(key: string, value: any) {
   return value;
 }
 
+function createComponent(name: string, template: HTMLTemplateElement) {
+  const element = template.content.children[0].cloneNode(true);
+  const component = class extends HTMLElement {
+    constructor() {
+      super();
+      const shadow = this.attachShadow({ mode: 'open' });
+      shadow.appendChild(element);
+    }
+  };
+
+  customElements.define(name, component);
+}
+
 window.init = init;
 window.watch = watch;
 window.unwatch = unwatch;
 
 /**
  * TODO:
- * - [ ] Composiblity
- * - [ ] Loops
- * - [ ] Conditionals
+ * - [ ] Loops v-for
+ * - [ ] Conditionals v-if
  * - [ ] Styling
  * - [ ] Input Elements (two way binding)
  * - [ ] Initialization: values are set after page loads
+ * - [x] Composiblity templates and slots
  * - [?] Cache computed
  * - [x] Computed Values
  */
