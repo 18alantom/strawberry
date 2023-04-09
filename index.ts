@@ -9,7 +9,6 @@ type Watcher = (newValue: unknown) => unknown;
 const attr = {
   innerText: 'sb-inner',
   // Loop Attributes
-  idx: 'sb-idx',
   loop: 'sb-loop',
   child: 'sb-child',
 } as const;
@@ -57,6 +56,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       return value();
     }
 
+    console.log('get', prop, value);
     return value;
   }
 
@@ -79,6 +79,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     const success = Reflect.set(target, prop, reactiveValue, receiver);
     this.update(key, value);
     this.updateDependencies(key, target);
+    console.log('set', key, prop, value);
     return success;
   }
 
@@ -112,8 +113,10 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
         continue;
       }
 
-      const children = newValue.map((item) => {
+      const children = newValue.map((item, i) => {
         const child = document.createElement(childTag);
+        const ckey = this.getKey(String(i), key);
+        child.setAttribute(attr.innerText, ckey);
         child.innerText = item;
         return child;
       });
@@ -236,6 +239,15 @@ window.unwatch = unwatch;
 
 /**
  * TODO:
+ * - [ ] Improve Updation
+ *  - updation should be surgical
+ *  - changing a list item should not replace all elements
+ *  - data can be nested [{v:[{},{x:99}]}] changes should be targeted
+ *  - figure out surgical updates, start from the root
+ *  - 'a.b.#.d'
+ *    - query select for a
+ *    - if found: query select for b
+ *    - else: query select for a.b (repeat)
  * - [ ] Loops v-for
  * - [ ] Conditionals v-if
  * - [ ] Watch array changes

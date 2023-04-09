@@ -9,3 +9,4 @@ Features:
 3. **Buildfree**: doesn't require a buildstep, link or copy the lib and you're ready to go.
 4. **0 Dependencies**: has no dependencies, uses Vanilla JS and WebAPIs for everything.
 5. **Tiny**: the source code is under 1000 LOC.
+6. **No VDOM**: directly updates the DOM.
