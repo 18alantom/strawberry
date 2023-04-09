@@ -77,13 +77,13 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
-    this.update(key, value);
+    this.update(value, key);
     this.updateDependencies(key, target);
     console.log('set', key, prop, value);
     return success;
   }
 
-  static update(key: string, newValue: unknown) {
+  static update(newValue: unknown, key: string) {
     if (typeof newValue === 'function') {
       newValue = newValue();
     }
@@ -101,11 +101,20 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       }
     }
 
-    if (!Array.isArray(newValue)) {
+    if (newValue === null) {
       return;
     }
 
-    // Handle Arrays
+    if (Array.isArray(newValue)) {
+      this.updateArrays(newValue, key);
+    }
+
+    if (typeof newValue === 'object' && Object.keys(newValue)) {
+      this.updateObjects(newValue, key);
+    }
+  }
+
+  static updateArrays(newValue: any[], key: string) {
     const loopQuery = `[${attr.loop}='${key}']`;
     for (const el of document.querySelectorAll(loopQuery)) {
       const childTag = el.getAttribute(attr.child);
@@ -120,14 +129,23 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
         child.innerText = item;
         return child;
       });
+
       el.replaceChildren(...children);
+    }
+  }
+
+  static updateObjects<O extends object>(newValue: O, key: string) {
+    for (const prop in newValue) {
+      const value = newValue[prop as keyof O];
+      const newKey = this.getKey(prop, key);
+      this.update(value, newKey);
     }
   }
 
   static updateDependencies(key: string, target: any) {
     const deps = this.dependents[key] ?? [];
     for (const { key, computed } of deps) {
-      this.update(key, computed);
+      this.update(computed, key);
     }
   }
 
@@ -239,15 +257,10 @@ window.unwatch = unwatch;
 
 /**
  * TODO:
- * - [ ] Improve Updation
- *  - updation should be surgical
+ * - [ ] Improve Updations
  *  - changing a list item should not replace all elements
+ *  - following are not handled: item delete, size grow, size shrink
  *  - data can be nested [{v:[{},{x:99}]}] changes should be targeted
- *  - figure out surgical updates, start from the root
- *  - 'a.b.#.d'
- *    - query select for a
- *    - if found: query select for b
- *    - else: query select for a.b (repeat)
  * - [ ] Loops v-for
  * - [ ] Conditionals v-if
  * - [ ] Watch array changes
