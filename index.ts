@@ -112,7 +112,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
   static callHandlers(newValue: unknown, key: string) {
     for (const attrSuffix in this.handlers) {
-      const handler = this.handlers[attrSuffix];
+      const handler = this.handlers[attrSuffix]!;
       const attrName = globalPrefix + attrSuffix;
       const query = `[${attrName}='${key}']`;
       const els = document.querySelectorAll(query);
@@ -140,7 +140,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       const sidx = dep.indexOf('.') + 1;
       const dkey = dep.slice(sidx);
       this.dependents[dkey] ??= [];
-      this.dependents[dkey].push({ key, computed: value });
+      this.dependents[dkey]!.push({ key, computed: value });
       (value as Reactive<Function>).__sb_dependencies! += 1;
     }
   }
@@ -237,7 +237,10 @@ function registerComponents() {
       class extends HTMLElement {
         constructor() {
           super();
-          const element = template.content.children[0].cloneNode(true);
+          const element = template.content.children[0]?.cloneNode(true);
+          if (!element) {
+            return;
+          }
           this.attachShadow({ mode: 'open' }).appendChild(element);
         }
       }
@@ -247,7 +250,7 @@ function registerComponents() {
 
 function watch(key: string, watcher: Watcher) {
   ReactivityHandler.watchers[key] ??= [];
-  ReactivityHandler.watchers[key].push(watcher);
+  ReactivityHandler.watchers[key]!.push(watcher);
 }
 
 function unwatch(key: string, watcher?: Watcher) {
@@ -284,4 +287,5 @@ window.init = init;
  * - [x] Composiblity templates and slots
  * - [?] Cache computed
  * - [x] Computed Values
+ * - [ ] Remove esbuild as a devdep
  */

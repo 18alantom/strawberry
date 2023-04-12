@@ -1,6 +1,7 @@
 {
-  "name": "buildless",
-  "version": "1.0.0",
+  "name": "strawberry",
+  "version": "0.0.1",
+  "description": "Single file frontend framework for Single File Applications",
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
@@ -12,5 +13,12 @@
   "devDependencies": {
     "esbuild": "^0.17.15",
     "typescript": "^5.0.3"
+  },
+  "author": {
+    "name": "Alan Tom",
+    "web": "https://github.com/18alantom"
+  },
+  "repository": {
+    "url": "https://github.com/18alantom/strawberry"
   }
 }
