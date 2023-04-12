@@ -3,7 +3,7 @@ type Complex = object | Function;
 type Meta = { __sb_prefix: string; __sb_dependencies?: number };
 type Reactive<T extends any> = T extends Complex ? T & Meta : never;
 type Watcher = (newValue: unknown) => unknown;
-type HandlerFunction = (value: unknown, el: Element) => unknown;
+type HandlerFunction = (newValue: unknown, el: Element) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
 type BasicAttrs = 'inner' | 'loop' | 'template';
 
@@ -44,6 +44,10 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     prop: string | symbol,
     receiver: any
   ): any {
+    if (prop === '__parent') {
+      return getParent(target);
+    }
+
     const value = Reflect.get(target, prop, receiver);
     if (value?.__sb_dependencies) {
       return value();
@@ -197,6 +201,20 @@ function getValue(key: string, value: any) {
   }
 
   return value;
+}
+
+function getParent(target: Reactive<object>) {
+  const key = target.__sb_prefix;
+  if (!key) {
+    return undefined;
+  }
+
+  const li = key.lastIndexOf('.');
+  if (li === -1) {
+    return globalData;
+  }
+
+  return getValue(key.slice(0, li), globalData);
 }
 
 /**
