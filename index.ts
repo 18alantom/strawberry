@@ -1,37 +1,31 @@
 type Primitive = boolean | symbol | string | number | bigint | undefined;
 type Complex = object | Function;
-
-type R = { __sb_prefix: string; __sb_dependencies?: number };
-type Reactive<T> = T extends Complex ? T & R : never;
-
+type Meta = { __sb_prefix: string; __sb_dependencies?: number };
+type Reactive<T extends any> = T extends Complex ? T & Meta : never;
 type Watcher = (newValue: unknown) => unknown;
+type HandlerFunction = (value: unknown, el: Element) => unknown;
+type HandlerMap = Record<string, HandlerFunction>;
+type BasicAttrs = 'inner' | 'loop' | 'template';
 
-const attr = {
-  innerText: 'sb-inner',
-  // Loop Attributes
-  loop: 'sb-loop',
-  child: 'sb-child',
-} as const;
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
-function reactive<T extends any>(obj: T, prefix: string): T | Reactive<T> {
-  if (obj && typeof obj === 'object') {
-    return proxy(obj, prefix);
-  }
+let globalData: null | Reactive<{}> = null;
+let globalPrefix = 'sb-';
 
-  return obj;
+function attr(key: BasicAttrs) {
+  return globalPrefix + key;
 }
 
-function proxy<O extends Function | object>(
-  obj: O,
-  prefix: string
-): Reactive<O> {
-  type K = keyof O;
+function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
 
+  type K = keyof T;
   for (const prop of Object.keys(obj)) {
-    const newprefix = ReactivityHandler.getKey(prop, prefix);
+    const newprefix = getKey(prop, prefix);
     const value = obj[prop as K];
-    obj[prop as K] = reactive(value, newprefix) as O[K];
+    obj[prop as K] = reactive(value, newprefix);
   }
 
   Object.defineProperty(obj, '__sb_prefix', {
@@ -39,13 +33,12 @@ function proxy<O extends Function | object>(
     enumerable: false,
   });
 
-  return new Proxy(obj, ReactivityHandler) as Reactive<O>;
+  return new Proxy(obj, ReactivityHandler) as Reactive<T>;
 }
 
 class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   static watchers: Record<string, Watcher[]> = {};
   static dependents: Record<string, { key: string; computed: Function }[]> = {};
-
   static get(
     target: Reactive<object>,
     prop: string | symbol,
@@ -70,10 +63,10 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       return Reflect.set(target, prop, value, receiver);
     }
 
-    const key = this.getKey(prop, target.__sb_prefix);
+    const key = getKey(prop, target.__sb_prefix);
     const reactiveValue = reactive(value, key);
     if (typeof value === 'function') {
-      this.handleComputed(value, key);
+      this.applyDependencies(value, key);
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
@@ -93,14 +86,9 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       watcher(newValue);
     }
 
-    // Set innerText
-    const innerTextQuery = `[${attr.innerText}='${key}']`;
-    for (const el of document.querySelectorAll(innerTextQuery)) {
-      if (el instanceof HTMLElement) {
-        el.innerText = String(newValue);
-      }
-    }
+    this.callHandlers(newValue, key);
 
+    // Set innerText
     if (newValue === null) {
       return;
     }
@@ -114,18 +102,31 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
   }
 
+  static callHandlers(newValue: unknown, key: string) {
+    for (const attrSuffix in this.handlers) {
+      const handler = this.handlers[attrSuffix];
+      const attrName = globalPrefix + attrSuffix;
+      const query = `[${attrName}='${key}']`;
+      const els = document.querySelectorAll(query);
+
+      for (const el of els) {
+        handler(newValue, el);
+      }
+    }
+  }
+
   static updateArrays(newValue: any[], key: string) {
-    const loopQuery = `[${attr.loop}='${key}']`;
+    const loopQuery = `[${attr('loop')}='${key}']`;
     for (const el of document.querySelectorAll(loopQuery)) {
-      const childTag = el.getAttribute(attr.child);
+      const childTag = el.getAttribute(attr('template'));
       if (!childTag) {
         continue;
       }
 
       const children = newValue.map((item, i) => {
         const child = document.createElement(childTag);
-        const ckey = this.getKey(String(i), key);
-        child.setAttribute(attr.innerText, ckey);
+        const ckey = getKey(String(i), key);
+        child.setAttribute(attr('inner'), ckey);
         child.innerText = item;
         return child;
       });
@@ -137,7 +138,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   static updateObjects<O extends object>(newValue: O, key: string) {
     for (const prop in newValue) {
       const value = newValue[prop as keyof O];
-      const newKey = this.getKey(prop, key);
+      const newKey = getKey(prop, key);
       this.update(value, newKey);
     }
   }
@@ -149,7 +150,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
   }
 
-  static handleComputed(value: Function, key: string) {
+  static applyDependencies(value: Function, key: string) {
     const fstring = value.toString();
     Object.defineProperty(value, '__sb_dependencies', {
       value: 0,
@@ -171,12 +172,73 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
   }
 
-  static getKey(prop: string, prefix: string) {
-    if (prefix === '') {
-      return prop;
+  static handlers: HandlerMap = {
+    inner: (value, el) =>
+      el instanceof HTMLElement ? (el.innerText = String(value)) : null,
+  };
+}
+
+function getKey(prop: string, prefix: string) {
+  if (prefix === '') {
+    return prop;
+  }
+
+  return prefix + '.' + prop;
+}
+
+function getValue(key: string, value: any) {
+  for (const k of key.split('.')) {
+    const tval = typeof value;
+    if (value === null || (tval !== 'function' && tval !== 'object')) {
+      return undefined;
     }
 
-    return prefix + '.' + prop;
+    value = Reflect.get(value, k);
+  }
+
+  return value;
+}
+
+/**
+ * External API Code
+ */
+function init(config?: { prefix?: string; handlers?: HandlerMap }) {
+  if (globalData === null) {
+    globalData = reactive({}, '') as {} & Meta;
+  }
+
+  if (config?.prefix) {
+    globalPrefix = config.prefix;
+  }
+
+  if (config?.handlers) {
+    ReactivityHandler.handlers = {
+      ...ReactivityHandler.handlers,
+      ...config.handlers,
+    };
+  }
+
+  registerComponents();
+  return { data: globalData, watch, unwatch };
+}
+
+function registerComponents() {
+  for (const template of document.getElementsByTagName('template')) {
+    const tagName = template.getAttribute('name');
+    if (!tagName) {
+      continue;
+    }
+
+    customElements.define(
+      tagName,
+      class extends HTMLElement {
+        constructor() {
+          super();
+          const element = template.content.children[0].cloneNode(true);
+          this.attachShadow({ mode: 'open' }).appendChild(element);
+        }
+      }
+    );
   }
 }
 
@@ -195,65 +257,7 @@ function unwatch(key: string, watcher?: Watcher) {
   ReactivityHandler.watchers[key] = watchers.filter((w) => w !== watcher);
 }
 
-function init(initData: object = {}) {
-  const data = reactive(initData, '');
-
-  createComponents();
-  document.addEventListener('DOMContentLoaded', () => {
-    setInitialValues(data);
-  });
-
-  return data;
-}
-
-function createComponents() {
-  for (const template of document.getElementsByTagName('template')) {
-    const name = template.getAttribute('name');
-    if (!name) {
-      continue;
-    }
-
-    createComponent(name, template);
-  }
-}
-
-function setInitialValues(data: unknown) {
-  for (const el of document.querySelectorAll(`[${attr.innerText}]`)) {
-    const key = el.getAttribute(attr.innerText);
-    data;
-    // TODO: Complete this function
-  }
-}
-
-function getValue(key: string, value: any) {
-  for (const k of key.split('.')) {
-    const tval = typeof value;
-    if (value === null || (tval !== 'function' && tval !== 'object')) {
-      return undefined;
-    }
-
-    value = Reflect.get(value, k);
-  }
-
-  return value;
-}
-
-function createComponent(name: string, template: HTMLTemplateElement) {
-  const component = class extends HTMLElement {
-    constructor() {
-      super();
-      const shadow = this.attachShadow({ mode: 'open' });
-      const element = template.content.children[0].cloneNode(true);
-      shadow.appendChild(element);
-    }
-  };
-
-  customElements.define(name, component);
-}
-
 window.init = init;
-window.watch = watch;
-window.unwatch = unwatch;
 
 /**
  * TODO:
@@ -261,15 +265,18 @@ window.unwatch = unwatch;
  *  - changing a list item should not replace all elements
  *  - following are not handled: item delete, size grow, size shrink
  *  - data can be nested [{v:[{},{x:99}]}] changes should be targeted
- * - [ ] Loops v-for
- * - [ ] Conditionals v-if
+ * - [ ] builtin handlers
+ *  - [x] innerText
+ *  - [ ] loops v-for
+ *  - [ ] templates
+ *  - [ ] input v-model (two way binding?)
+ *  - [ ] conditionals v-if
+ *  - [ ] style
  * - [ ] Watch array changes
- * - [ ] Styling
- * - [ ] Input Elements (two way binding)
  * - [ ] Initialization: values are set after page loads
- * - [ ] Variable prefix
- * - [ ] Reactivity for all props
  * - [ ] Todo App and async
+ * - [x] Custom handlers
+ * - [x] Custom prefix
  * - [x] Composiblity templates and slots
  * - [?] Cache computed
  * - [x] Computed Values
