@@ -4,7 +4,10 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "tojs": "esbuild . --bundle > index.js"
+    "tojs": "esbuild . --bundle | tee index.js | wc -c",
+    "size": "yarn run fullsize && yarn run minfsize",
+    "fullsize": "esbuild . --bundle | tee temp.js | wc -c | awk '{print \"full uncomp: \" $1}' && gzip -c temp.js | wc -c | awk '{print \"full gzippd: \" $1}' && rm temp.js",
+    "minfsize": "esbuild . --bundle --minify | tee temp.js | wc -c | awk '{print \"minf uncomp: \" $1}' && gzip -c temp.js | wc -c | awk '{print \"minf gzippd: \" $1}' && rm temp.js"
   },
   "devDependencies": {
     "esbuild": "^0.17.15",

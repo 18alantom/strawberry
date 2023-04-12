@@ -3,7 +3,7 @@ type Complex = object | Function;
 type Meta = { __sb_prefix: string; __sb_dependencies?: number };
 type Reactive<T extends any> = T extends Complex ? T & Meta : never;
 type Watcher = (newValue: unknown) => unknown;
-type HandlerFunction = (newValue: unknown, el: Element) => unknown;
+type HandlerFunction = (newValue: unknown, el: Element, key: string) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
 type BasicAttrs = 'inner' | 'loop' | 'template';
 
@@ -70,12 +70,15 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     const key = getKey(prop, target.__sb_prefix);
     const reactiveValue = reactive(value, key);
     if (typeof value === 'function') {
-      this.applyDependencies(value, key);
+      this.setDependencyCount(value, key);
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
     this.update(value, key);
-    this.updateDependencies(key, target);
+    for (const dep of this.dependents[key] ?? []) {
+      this.update(dep.computed, dep.key);
+    }
+
     console.log('set', key, prop, value);
     return success;
   }
@@ -85,24 +88,25 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       newValue = newValue();
     }
 
-    // Trigger Watchers
+    if (newValue instanceof Promise) {
+      (newValue as Promise<unknown>).then((v: unknown) => this.update(v, key));
+      return;
+    }
+
     for (const watcher of this.watchers?.[key] ?? []) {
       watcher(newValue);
     }
 
     this.callHandlers(newValue, key);
 
-    // Set innerText
-    if (newValue === null) {
+    if (!newValue || typeof newValue !== 'object') {
       return;
     }
 
-    if (Array.isArray(newValue)) {
-      this.updateArrays(newValue, key);
-    }
-
-    if (typeof newValue === 'object' && Object.keys(newValue)) {
-      this.updateObjects(newValue, key);
+    for (const prop in newValue) {
+      const value = newValue[prop as keyof typeof newValue];
+      const newKey = getKey(prop, key);
+      this.update(value, newKey);
     }
   }
 
@@ -114,47 +118,12 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       const els = document.querySelectorAll(query);
 
       for (const el of els) {
-        handler(newValue, el);
+        handler(newValue, el, key);
       }
     }
   }
 
-  static updateArrays(newValue: any[], key: string) {
-    const loopQuery = `[${attr('loop')}='${key}']`;
-    for (const el of document.querySelectorAll(loopQuery)) {
-      const childTag = el.getAttribute(attr('template'));
-      if (!childTag) {
-        continue;
-      }
-
-      const children = newValue.map((item, i) => {
-        const child = document.createElement(childTag);
-        const ckey = getKey(String(i), key);
-        child.setAttribute(attr('inner'), ckey);
-        child.innerText = item;
-        return child;
-      });
-
-      el.replaceChildren(...children);
-    }
-  }
-
-  static updateObjects<O extends object>(newValue: O, key: string) {
-    for (const prop in newValue) {
-      const value = newValue[prop as keyof O];
-      const newKey = getKey(prop, key);
-      this.update(value, newKey);
-    }
-  }
-
-  static updateDependencies(key: string, target: any) {
-    const deps = this.dependents[key] ?? [];
-    for (const { key, computed } of deps) {
-      this.update(computed, key);
-    }
-  }
-
-  static applyDependencies(value: Function, key: string) {
+  static setDependencyCount(value: Function, key: string) {
     const fstring = value.toString();
     Object.defineProperty(value, '__sb_dependencies', {
       value: 0,
@@ -179,6 +148,22 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   static handlers: HandlerMap = {
     inner: (value, el) =>
       el instanceof HTMLElement ? (el.innerText = String(value)) : null,
+    loop: (value, el, key) => {
+      const childTag = el.getAttribute(attr('template'));
+      if (!childTag || !Array.isArray(value)) {
+        return;
+      }
+
+      const children = value.map((item, i) => {
+        const child = document.createElement(childTag);
+        const ckey = getKey(String(i), key);
+        child.setAttribute(attr('inner'), ckey);
+        child.innerText = item;
+        return child;
+      });
+
+      el.replaceChildren(...children);
+    },
   };
 }
 
@@ -290,6 +275,7 @@ window.init = init;
  *  - [ ] input v-model (two way binding?)
  *  - [ ] conditionals v-if
  *  - [ ] style
+ * - [ ] Sync: refresh UI, such as after page load
  * - [ ] Watch array changes
  * - [ ] Initialization: values are set after page loads
  * - [ ] Todo App and async
