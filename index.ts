@@ -3,7 +3,12 @@ type Complex = object | Function;
 type Meta = { __sb_prefix: string; __sb_dependencies?: number };
 type Reactive<T extends any> = T extends Complex ? T & Meta : never;
 type Watcher = (newValue: unknown) => unknown;
-type HandlerFunction = (newValue: unknown, el: Element, key: string) => unknown;
+type HandlerFunction = (
+  newValue: unknown,
+  el: Element,
+  key: string,
+  isDelete: boolean
+) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
 type BasicAttrs = 'inner' | 'loop' | 'template';
 
@@ -74,22 +79,43 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
-    this.update(value, key);
+    this.update(value, key, false);
     for (const dep of this.dependents[key] ?? []) {
-      this.update(dep.computed, dep.key);
+      this.update(dep.computed, dep.key, false);
     }
 
     console.log('set', key, prop, value);
     return success;
   }
 
-  static update(newValue: unknown, key: string) {
+  static deleteProperty(
+    target: Reactive<object>,
+    prop: string | symbol
+  ): boolean {
+    if (typeof prop === 'symbol') {
+      return Reflect.deleteProperty(target, prop);
+    }
+
+    const key = getKey(prop, target.__sb_prefix);
+    const success = Reflect.deleteProperty(target, prop);
+    this.update(undefined, key, true);
+    for (const dep of this.dependents[key] ?? []) {
+      this.update(dep.computed, dep.key, false);
+    }
+
+    console.log('delete', key, prop);
+    return success;
+  }
+
+  static update(newValue: unknown, key: string, isDelete: boolean) {
     if (typeof newValue === 'function') {
       newValue = newValue();
     }
 
     if (newValue instanceof Promise) {
-      (newValue as Promise<unknown>).then((v: unknown) => this.update(v, key));
+      (newValue as Promise<unknown>).then((v: unknown) =>
+        this.update(v, key, false)
+      );
       return;
     }
 
@@ -97,8 +123,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       watcher(newValue);
     }
 
-    this.callHandlers(newValue, key);
-
+    this.callHandlers(newValue, key, isDelete);
     if (!newValue || typeof newValue !== 'object') {
       return;
     }
@@ -106,11 +131,11 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     for (const prop in newValue) {
       const value = newValue[prop as keyof typeof newValue];
       const newKey = getKey(prop, key);
-      this.update(value, newKey);
+      this.update(value, newKey, false);
     }
   }
 
-  static callHandlers(newValue: unknown, key: string) {
+  static callHandlers(newValue: unknown, key: string, isDelete: boolean) {
     for (const attrSuffix in this.handlers) {
       const handler = this.handlers[attrSuffix]!;
       const attrName = globalPrefix + attrSuffix;
@@ -118,7 +143,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       const els = document.querySelectorAll(query);
 
       for (const el of els) {
-        handler(newValue, el, key);
+        handler(newValue, el, key, isDelete);
       }
     }
   }
@@ -146,9 +171,18 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static handlers: HandlerMap = {
-    inner: (value, el) =>
-      el instanceof HTMLElement ? (el.innerText = String(value)) : null,
-    loop: (value, el, key) => {
+    inner: (value, el, _, isDelete) => {
+      if (isDelete) {
+        return el.remove();
+      }
+
+      el instanceof HTMLElement ? (el.innerText = String(value)) : null;
+    },
+    loop: (value, el, key, isDelete) => {
+      if (isDelete) {
+        return el.remove();
+      }
+
       const childTag = el.getAttribute(attr('template'));
       if (!childTag || !Array.isArray(value)) {
         return;
