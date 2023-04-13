@@ -10,7 +10,7 @@ type HandlerFunction = (
   isDelete: boolean
 ) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
-type BasicAttrs = 'inner' | 'list' | 'template';
+type BasicAttrs = 'inner' | 'list' | 'template' | 'if';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -218,6 +218,24 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       });
 
       el.replaceChildren(...children);
+    },
+    if: (value, el, key) => {
+      const isshow = Boolean(value);
+      const istemplate = el instanceof HTMLTemplateElement;
+      if (isshow && istemplate) {
+        const child = el.children[0];
+        if (child) {
+          el.replaceWith(child);
+        }
+        console.log('here');
+      }
+
+      if (!isshow && !istemplate) {
+        const temp = document.createElement('template');
+        temp.appendChild(el.cloneNode(true));
+        temp.setAttribute(attr('if'), key);
+        el.replaceWith(temp);
+      }
     },
   };
 }
