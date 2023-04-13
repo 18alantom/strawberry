@@ -10,7 +10,7 @@ type HandlerFunction = (
   isDelete: boolean
 ) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
-type BasicAttrs = 'inner' | 'loop' | 'template';
+type BasicAttrs = 'inner' | 'list' | 'template';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -80,12 +80,38 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
     this.update(value, key, false);
+    if (Array.isArray(target) && /\d+/.test(prop)) {
+      this.syncList(target, prop, value);
+    }
+
     for (const dep of this.dependents[key] ?? []) {
       this.update(dep.computed, dep.key, false);
     }
 
     console.log('set', key, prop, value);
     return success;
+  }
+
+  static syncList(target: Reactive<any[]>, prop: string, value: any) {
+    const prefix = target.__sb_prefix;
+    const query = `[${attr('list')}="${prefix}"]`;
+    const key = getKey(prop, prefix);
+    const els = document.querySelectorAll(query);
+
+    for (const el of els) {
+      const ch = el.querySelectorAll(`[${attr('inner')}="${key}"]`);
+      if (ch.length) {
+        continue;
+      }
+
+      const childTag = el.getAttribute(attr('template'));
+      if (!childTag) {
+        continue;
+      }
+
+      const child = getChild(childTag, key, value);
+      el.appendChild(child);
+    }
   }
 
   static deleteProperty(
@@ -103,7 +129,6 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       this.update(dep.computed, dep.key, false);
     }
 
-    console.log('delete', key, prop);
     return success;
   }
 
@@ -178,7 +203,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
       el instanceof HTMLElement ? (el.innerText = String(value)) : null;
     },
-    loop: (value, el, key, isDelete) => {
+    list: (value, el, key, isDelete) => {
       if (isDelete) {
         return el.remove();
       }
@@ -189,16 +214,19 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       }
 
       const children = value.map((item, i) => {
-        const child = document.createElement(childTag);
-        const ckey = getKey(String(i), key);
-        child.setAttribute(attr('inner'), ckey);
-        child.innerText = item;
-        return child;
+        return getChild(childTag, getKey(String(i), key), item);
       });
 
       el.replaceChildren(...children);
     },
   };
+}
+
+function getChild(tag: string, key: string, item: any) {
+  const child = document.createElement(tag);
+  child.setAttribute(attr('inner'), key);
+  child.innerText = item;
+  return child;
 }
 
 function getKey(prop: string, prefix: string) {
@@ -307,7 +335,7 @@ window.init = init;
  *  - data can be nested [{v:[{},{x:99}]}] changes should be targeted
  * - [ ] builtin handlers
  *  - [x] innerText
- *  - [ ] loops v-for
+ *  - [ ] lists v-for
  *  - [ ] templates
  *  - [ ] input v-model (two way binding?)
  *  - [ ] conditionals v-if
