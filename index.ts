@@ -10,7 +10,7 @@ type HandlerFunction = (
   isDelete: boolean
 ) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
-type BasicAttrs = 'inner' | 'list' | 'template' | 'if';
+type BasicAttrs = 'text' | 'list' | 'template' | 'if';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -58,7 +58,6 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       return value();
     }
 
-    console.log('get', prop, value);
     return value;
   }
 
@@ -88,7 +87,6 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       this.update(dep.computed, dep.key, false);
     }
 
-    console.log('set', key, prop, value);
     return success;
   }
 
@@ -99,7 +97,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     const els = document.querySelectorAll(query);
 
     for (const el of els) {
-      const ch = el.querySelectorAll(`[${attr('inner')}="${key}"]`);
+      const ch = el.querySelectorAll(`[${attr('text')}="${key}"]`);
       if (ch.length) {
         continue;
       }
@@ -189,6 +187,16 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
       const sidx = dep.indexOf('.') + 1;
       const dkey = dep.slice(sidx);
+
+      /**
+        TODO: Fix dependency selection
+        const dsplits = dkey.split('.');
+        for (let i = 0; i < dsplits.length; i++) {
+          const sdkey = dsplits.slice(0, i + 1).join('.');
+          console.log('sdk', sdkey);
+        }
+       */
+
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value });
       (value as Reactive<Function>).__sb_dependencies! += 1;
@@ -196,7 +204,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static handlers: HandlerMap = {
-    inner: (value, el, _, isDelete) => {
+    text: (value, el, _, isDelete) => {
       if (isDelete) {
         return el.remove();
       }
@@ -223,11 +231,12 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       const isshow = Boolean(value);
       const istemplate = el instanceof HTMLTemplateElement;
       if (isshow && istemplate) {
-        const child = el.children[0];
-        if (child) {
-          el.replaceWith(child);
+        const child = el.children[0] ?? el.content.children[0];
+        if (!child) {
+          return;
         }
-        console.log('here');
+        child.setAttribute(attr('if'), key);
+        el.replaceWith(child);
       }
 
       if (!isshow && !istemplate) {
@@ -240,10 +249,48 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   };
 }
 
-function getChild(tag: string, key: string, item: any) {
+function getChild(tag: string, prefix: string, value: any) {
   const child = document.createElement(tag);
-  child.setAttribute(attr('inner'), key);
-  child.innerText = item;
+  child.setAttribute(attr('text'), prefix);
+  child.innerText = value;
+  return child;
+}
+
+function _getChild(tag: string, prefix: string, value: any) {
+  // TODO: Check for sb-list sb-object
+  const child = document.createElement(tag);
+  const slots = child.shadowRoot?.querySelectorAll('slot');
+  if (
+    !slots ||
+    !slots.length ||
+    (slots.length === 1 && !slots[0]?.getAttribute('name'))
+  ) {
+    child.setAttribute(attr('text'), prefix);
+    child.innerText = value;
+    return child;
+  }
+
+  for (const slot of slots) {
+    const sname = slot.getAttribute('name');
+    if (!sname) {
+      continue;
+    }
+
+    const key = getKey(sname, prefix);
+    const svalue = value?.[sname] ?? '';
+    const templateName = slot.getAttribute(attr('template'));
+    let schild: HTMLElement;
+    if (templateName) {
+      schild = _getChild(templateName, svalue, key);
+    } else {
+      schild = document.createElement('span');
+      schild.innerText = svalue;
+      schild.setAttribute(attr('text'), key);
+    }
+    schild.setAttribute('slot', sname);
+    child.appendChild(schild);
+  }
+
   return child;
 }
 
@@ -302,13 +349,13 @@ function init(config?: { prefix?: string; handlers?: HandlerMap }) {
   }
 
   registerComponents();
-  return { data: globalData, watch, unwatch };
+  return globalData;
 }
 
 function registerComponents() {
   for (const template of document.getElementsByTagName('template')) {
     const tagName = template.getAttribute('name');
-    if (!tagName) {
+    if (!tagName || !!customElements.get(tagName)) {
       continue;
     }
 
@@ -343,21 +390,25 @@ function unwatch(key: string, watcher?: Watcher) {
   ReactivityHandler.watchers[key] = watchers.filter((w) => w !== watcher);
 }
 
-window.init = init;
+init.watch = watch;
+init.unwatch = unwatch;
+init.register = registerComponents;
+// @ts-ignore
+window.sb = init;
 
 /**
  * TODO:
  * - [ ] Improve Updations
- *  - changing a list item should not replace all elements
- *  - following are not handled: item delete, size grow, size shrink
- *  - data can be nested [{v:[{},{x:99}]}] changes should be targeted
+ *  - [x] changing a list item should not replace all elements
+ *  - [x] following are not handled: item delete, push, pop
+ *  - [ ] data can be nested [{v:[{},{x:99}]}] changes should be targeted
  * - [ ] builtin handlers
- *  - [x] innerText
  *  - [ ] lists v-for
  *  - [ ] templates
  *  - [ ] input v-model (two way binding?)
- *  - [ ] conditionals v-if
  *  - [ ] style
+ *  - [x] conditionals v-if
+ *  - [x] innerText
  * - [ ] Sync: refresh UI, such as after page load
  * - [ ] Watch array changes
  * - [ ] Initialization: values are set after page loads
@@ -367,5 +418,7 @@ window.init = init;
  * - [x] Composiblity templates and slots
  * - [?] Cache computed
  * - [x] Computed Values
+ * - [ ] Review the code, take note of implementation and hacks
+ * - [ ] Update Subtree after display
  * - [ ] Remove esbuild as a devdep
  */

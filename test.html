@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      html,
+      body {
+        margin: 0px;
+        background-color: rgb(0, 0, 0);
+        color: white;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main > h1 {
+        color: rgb(219, 126, 155);
+        margin: 0px;
+        padding: 0px;
+        padding: 1rem;
+        border-bottom: 1px solid pink;
+      }
+
+      main > div > p {
+        margin: 0px;
+      }
+    </style>
+    <title>Strawberry - Test</title>
+    <script src="index.js"></script>
+    <script>
+      let i = 0;
+      let success = 0;
+      let failure = 0;
+      function test(truthy, message) {
+        const idx = String(i).padStart(3, '0');
+        if (truthy) {
+          console.log(`🟢 ${idx} - ${message}`);
+          success += 1;
+          document.getElementById('success').innerText = success;
+        } else {
+          console.error(`🔴 ${idx} - ${message}`);
+          failure += 1;
+          document.getElementById('failure').innerText = failure;
+        }
+
+        document.getElementById('total').innerText = success + failure;
+        i += 1;
+      }
+    </script>
+  </head>
+  <template name="red-p">
+    <p style="color: red">
+      <slot />
+    </p>
+  </template>
+
+  <body>
+    <main style="border: 1px solid pink; width: fit-content; margin: 1rem">
+      <h1>Strawberry - Test</h1>
+      <div style="display: flex; justify-content: space-between; padding: 1rem">
+        <p style="color: rgb(160, 227, 160)">
+          Success: <span id="success"></span>
+        </p>
+        <p style="color: rgb(242, 147, 147)">
+          Failure: <span id="failure"></span>
+        </p>
+        <p style="color: gainsboro">Total: <span id="total"></span></p>
+      </div>
+    </main>
+    <script>
+      test(typeof sb === 'function', 'sb is funciton');
+
+      const data = sb();
+      test('__sb_prefix' in data, 'data is sb magic');
+      test(typeof sb.watch === 'function', 'sb.watch is function');
+      test(typeof sb.unwatch === 'function', 'sb.unwatch is function');
+      test(typeof sb.register === 'function', 'sb.register is function');
+      test(data === sb(), 'sb returns same data');
+
+      data.x = 10;
+      test(data.x === 10, 'x (value) set on data');
+
+      data.y = () => data.x + 5;
+      test(data.y === 15, 'y (computed) set on data');
+
+      const rp = document.createElement('red-p').shadowRoot?.children[0];
+      test(rp instanceof HTMLParagraphElement, 'el red-p has p shadowRoot');
+      test(rp.style.color === 'red', 'red-p has style.color red');
+    </script>
+
+    <p id="1" sb-text="a">notset</p>
+    <script>
+      const p1 = document.getElementById('1');
+      test(p1.isConnected, 'p#1 connected');
+      test(p1.innerText === 'notset', 'p#1 data not set');
+
+      data.a = 'set';
+      test(p1.innerText === 'set', 'p#1 data set');
+
+      data.a = 'changed';
+      test(p1.innerText === 'changed', 'p#1 data changed');
+
+      delete data.a;
+      test(!p1.isConnected, 'p#1 not connected');
+    </script>
+
+    <template name="green-p">
+      <p style="color: green">
+        <slot />
+      </p>
+    </template>
+    <script>
+      let gp = document.createElement('green-p').shadowRoot?.children[0];
+      test(gp === undefined, 'green-p not registered');
+
+      sb.register();
+      gp = document.createElement('green-p').shadowRoot?.children[0];
+      test(gp instanceof HTMLParagraphElement, 'el green-p has p shadowRoot');
+      test(gp.style.color === 'green', 'green-p has style.color green');
+    </script>
+
+    <red-p id="2" sb-text="a">red</red-p>
+    <green-p id="3" sb-text="b">green</green-p>
+    <script>
+      const p2 = document.getElementById('2');
+      const p3 = document.getElementById('3');
+      test(p2.tagName.toLowerCase() === 'red-p', 'p#2 is red-p');
+      test(p3.tagName.toLowerCase() === 'green-p', 'p#3 is red-p');
+      test(p2.innerText === 'red', 'p#2 data not set');
+      test(p3.innerText === 'green', 'p#3 data not set');
+
+      data.a = 'RED';
+      data.b = 'GREEN';
+      test(p2.innerText === 'RED', 'p#2 data set');
+      test(p3.innerText === 'GREEN', 'p#3 data set');
+
+      data.b = () => data.a.toLowerCase();
+      test(p3.innerText === 'red', 'p#3 data computed');
+
+      data.a = 'GREEN';
+      test(p3.innerText === 'green', 'p#3 data set from computed');
+
+      delete data.a;
+      test(!p2.isConnected, 'p#2 not connected');
+      delete data.b;
+      test(!p3.isConnected, 'p#3 not connected');
+    </script>
+
+    <template sb-if="a">
+      <p id="4">temp</p>
+    </template>
+    <script>
+      test(document.getElementById('4') === null, 'p#4 not found');
+
+      data.a = false;
+      test(document.getElementById('4') === null, 'p#4 still not found');
+
+      data.a = true;
+      const p4 = document.getElementById('4');
+      test(p4 instanceof HTMLParagraphElement, 'p#4 found');
+
+      data.a = false;
+      test(!p4.isConnected, 'p#4 is not connected after false');
+
+      data.a = true;
+
+      const p4Clone = document.getElementById('4');
+      test(p4 !== p4Clone, 'p#4 different from clone');
+      test(p4Clone.isConnected, 'p#4 clone is connected');
+      test(!p4.isConnected, 'p#4 is not connected after clone');
+
+      delete data.a;
+      test(!p4Clone.isConnected, 'p#4 clone is not connected');
+
+      data.a = true;
+      test(
+        document.getElementById('4') instanceof HTMLParagraphElement,
+        'p#4 found after delete and set'
+      );
+      delete data.a;
+    </script>
+
+    <p id="5" sb-text="b">notset</p>
+    <script>
+      const p5 = document.getElementById('5');
+      test(p5.innerText === 'notset', 'p#5 data not set');
+      data.a = 'stuff';
+      data.b = () => [data.a, data.a].join(',');
+
+      test(
+        p5.innerText === ['stuff', 'stuff'].join(','),
+        'p#5 (computed) data set'
+      );
+      data.a = 'thing';
+      test(
+        p5.innerText === ['thing', 'thing'].join(','),
+        'p#5 (computed) data updated'
+      );
+
+      delete data.a;
+      test(p5.innerText === ',', 'p#5 (computed) updated on a delete');
+
+      delete data.b;
+      test(!p5.isConnected, 'p#5 not connected after b (computed) delete');
+
+      /**
+       * TODO:
+       * - [ ] test watch
+       * - [ ] test unwatch
+       * - [ ] test nested components update
+       * - [ ] test loop
+       */
+    </script>
+  </body>
+</html>
