@@ -68,14 +68,14 @@
       </div>
     </main>
     <script>
-      test(typeof sb === 'function', 'sb is funciton');
+      test(typeof sb === 'object', 'sb is funciton');
 
-      const data = sb();
+      const data = sb.init();
       test('__sb_prefix' in data, 'data is sb magic');
       test(typeof sb.watch === 'function', 'sb.watch is function');
       test(typeof sb.unwatch === 'function', 'sb.unwatch is function');
       test(typeof sb.register === 'function', 'sb.register is function');
-      test(data === sb(), 'sb returns same data');
+      test(data === sb.init(), 'sb returns same data');
 
       data.x = 10;
       test(data.x === 10, 'x (value) set on data');

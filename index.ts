@@ -1,4 +1,3 @@
-type Primitive = boolean | symbol | string | number | bigint | undefined;
 type Complex = object | Function;
 type Meta = { __sb_prefix: string; __sb_dependencies?: number };
 type Reactive<T extends any> = T extends Complex ? T & Meta : never;
@@ -206,15 +205,6 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       const sidx = dep.indexOf('.') + 1;
       const dkey = dep.slice(sidx);
 
-      /**
-        TODO: Fix dependency selection
-        const dsplits = dkey.split('.');
-        for (let i = 0; i < dsplits.length; i++) {
-          const sdkey = dsplits.slice(0, i + 1).join('.');
-          console.log('sdk', sdkey);
-        }
-       */
-
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value });
       (value as Reactive<Function>).__sb_dependencies! += 1;
@@ -358,7 +348,7 @@ function getParent(target: Reactive<object>) {
 /**
  * External API Code
  */
-function init(config?: { prefix?: string; handlers?: HandlerMap }) {
+export function init(config?: { prefix?: string; handlers?: HandlerMap }) {
   if (globalData === null) {
     globalData = reactive({}, '') as {} & Meta;
   }
@@ -374,11 +364,11 @@ function init(config?: { prefix?: string; handlers?: HandlerMap }) {
     };
   }
 
-  registerComponents();
+  register();
   return globalData;
 }
 
-function registerComponents() {
+export function register() {
   for (const template of document.getElementsByTagName('template')) {
     const tagName = template.getAttribute('name');
     if (!tagName || !!customElements.get(tagName)) {
@@ -401,12 +391,12 @@ function registerComponents() {
   }
 }
 
-function watch(key: string, watcher: Watcher) {
+export function watch(key: string, watcher: Watcher) {
   ReactivityHandler.watchers[key] ??= [];
   ReactivityHandler.watchers[key]!.push(watcher);
 }
 
-function unwatch(key?: string, watcher?: Watcher) {
+export function unwatch(key?: string, watcher?: Watcher) {
   if (!key) {
     ReactivityHandler.watchers = {};
     return;
@@ -421,37 +411,19 @@ function unwatch(key?: string, watcher?: Watcher) {
   ReactivityHandler.watchers[key] = watchers.filter((w) => w !== watcher);
 }
 
-init.watch = watch;
-init.unwatch = unwatch;
-init.register = registerComponents;
-// @ts-ignore
-window.sb = init;
-
 /**
  * TODO:
- * - [ ] remove sb-object, sb-list, sb-text with sb-mark
- * - [ ] Improve Updations
- *  - [x] changing a list item should not replace all elements
- *  - [x] following are not handled: item delete, push, pop
- *  - [ ] data can be nested [{v:[{},{x:99}]}] changes should be targeted
+ * - [?] data can be nested [{v:[{},{x:99}]}] changes should be targeted
  * - [ ] builtin handlers
- *  - [ ] lists v-for
- *  - [ ] templates
- *  - [ ] input v-model (two way binding?)
- *  - [ ] style
- *  - [x] conditionals v-if
- *  - [x] innerText
- * - [ ] Sync: refresh UI, such as after page load
- * - [ ] Watch array changes
+ *  - [?] input v-model (two way binding?)
+ *  - [?] style
+ * - [?] Cache computed
+ * - [-] Watch array changes
+ * - [ ] sync[node]: refresh UI, such as after page load
  * - [ ] Initialization: values are set after page loads
  * - [ ] Todo App and async
- * - [x] Custom handlers
- * - [x] Custom prefix
- * - [x] Composiblity templates and slots
- * - [?] Cache computed
- * - [x] Computed Values
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Remove esbuild as a devdep
- *
+ * - [ ] Sync newly inserted nodes with other handlers
  */

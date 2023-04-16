@@ -5,7 +5,7 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "tojs": "esbuild . --bundle | tee index.js | wc -c",
+    "tojs": "esbuild . --bundle --format=iife --global-name=sb | tee index.js | wc -c",
     "size": "yarn run fullsize && yarn run minfsize",
     "fullsize": "esbuild . --bundle | tee temp.js | wc -c | awk '{print \"full uncomp: \" $1}' && gzip -c temp.js | wc -c | awk '{print \"full gzippd: \" $1}' && rm temp.js",
     "minfsize": "esbuild . --bundle --minify | tee temp.js | wc -c | awk '{print \"minf uncomp: \" $1}' && gzip -c temp.js | wc -c | awk '{print \"minf gzippd: \" $1}' && rm temp.js"
