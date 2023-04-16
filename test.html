@@ -86,9 +86,12 @@
       const rp = document.createElement('red-p').shadowRoot?.children[0];
       test(rp instanceof HTMLParagraphElement, 'el red-p has p shadowRoot');
       test(rp.style.color === 'red', 'red-p has style.color red');
+
+      delete data.x;
+      delete data.y;
     </script>
 
-    <p id="1" sb-text="a">notset</p>
+    <p id="1" sb-mark="a">notset</p>
     <script>
       const p1 = document.getElementById('1');
       test(p1.isConnected, 'p#1 connected');
@@ -119,8 +122,8 @@
       test(gp.style.color === 'green', 'green-p has style.color green');
     </script>
 
-    <red-p id="2" sb-text="a">red</red-p>
-    <green-p id="3" sb-text="b">green</green-p>
+    <red-p id="2" sb-mark="a">red</red-p>
+    <green-p id="3" sb-mark="b">green</green-p>
     <script>
       const p2 = document.getElementById('2');
       const p3 = document.getElementById('3');
@@ -180,7 +183,7 @@
       delete data.a;
     </script>
 
-    <p id="5" sb-text="b">notset</p>
+    <p id="5" sb-mark="b">notset</p>
     <script>
       const p5 = document.getElementById('5');
       test(p5.innerText === 'notset', 'p#5 data not set');
@@ -203,10 +206,52 @@
       delete data.b;
       test(!p5.isConnected, 'p#5 not connected after b (computed) delete');
 
+      data.c = 0;
+      let w = 0;
+      const w1 = (nv) => test(nv === 1, 'watch 1 working');
+      const w2 = () => w++;
+
+      sb.watch('c', w1);
+      sb.watch('c', w2);
+
+      data.c = 1;
+      test(w === 1, 'watch 2 ran');
+
+      sb.unwatch('c', w1);
+      data.c = 5;
+      test(w === 2, 'watch 2 ran again');
+
+      sb.unwatch('c', w2);
+      data.c = 1;
+      test(w === 2, 'watch 2 removed');
+
+      delete data.c;
+      delete data.b;
+      delete data.a;
+
+      data.a = 1;
+      data.b = () => data.a + 1;
+
+      sb.watch('b', (v) => test(v === 3, 'watch 3 working'));
+      sb.watch('b', (v) => test(typeof v === 'number', 'watch 4 working'));
+      data.a = 2;
+
+      sb.unwatch('b');
+      delete data.b;
+      data.a = 3;
+
+      sb.watch('b', (v) =>
+        test(v === 4 || v === undefined, `watch 5 (${v}) is working`)
+      );
+
+      data.b = 4;
+      delete data.b;
+      sb.unwatch();
+      delete data.a;
+    </script>
+    <script>
       /**
        * TODO:
-       * - [ ] test watch
-       * - [ ] test unwatch
        * - [ ] test nested components update
        * - [ ] test loop
        */

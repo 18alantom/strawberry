@@ -10,7 +10,7 @@ type HandlerFunction = (
   isDelete: boolean
 ) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
-type BasicAttrs = 'text' | 'list' | 'template' | 'if';
+type BasicAttrs = 'mark' | 'child' | 'if';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -44,6 +44,7 @@ function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
 class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   static watchers: Record<string, Watcher[]> = {};
   static dependents: Record<string, { key: string; computed: Function }[]> = {};
+
   static get(
     target: Reactive<object>,
     prop: string | symbol,
@@ -80,35 +81,25 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     const success = Reflect.set(target, prop, reactiveValue, receiver);
     this.update(value, key, false);
     if (Array.isArray(target) && /\d+/.test(prop)) {
-      this.syncList(target, prop, value);
+      this.syncTree(target, prop, value);
     }
 
     for (const dep of this.dependents[key] ?? []) {
       this.update(dep.computed, dep.key, false);
     }
 
+    this.updateDependencies(key);
     return success;
   }
 
-  static syncList(target: Reactive<any[]>, prop: string, value: any) {
-    const prefix = target.__sb_prefix;
-    const query = `[${attr('list')}="${prefix}"]`;
-    const key = getKey(prop, prefix);
-    const els = document.querySelectorAll(query);
+  static updateDependencies(key: string) {
+    const dependents = Object.keys(this.dependents)
+      .filter((k) => k.startsWith(key))
+      .map((k) => this.dependents[k] ?? [])
+      .flat();
 
-    for (const el of els) {
-      const ch = el.querySelectorAll(`[${attr('text')}="${key}"]`);
-      if (ch.length) {
-        continue;
-      }
-
-      const childTag = el.getAttribute(attr('template'));
-      if (!childTag) {
-        continue;
-      }
-
-      const child = getChild(childTag, key, value);
-      el.appendChild(child);
+    for (const dep of dependents) {
+      this.update(dep.computed, dep.key, false);
     }
   }
 
@@ -127,7 +118,34 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       this.update(dep.computed, dep.key, false);
     }
 
+    for (const k of Object.keys(this.dependents)) {
+      this.dependents[k] =
+        this.dependents[k]?.filter((d) => d.key !== key) ?? [];
+    }
+
     return success;
+  }
+
+  static syncTree(target: Reactive<any[]>, prop: string, value: any) {
+    // TODO: Fix and Complete this function
+    const prefix = target.__sb_prefix;
+    const els = document.querySelectorAll(`[${attr('mark')}="${prefix}"]`);
+
+    const key = getKey(prop, prefix);
+    for (const el of els) {
+      const ch = el.querySelector(`[${attr('mark')}="${key}"]`);
+      if (ch !== null) {
+        continue;
+      }
+
+      const childTag = el.getAttribute(attr('child'));
+      if (!childTag) {
+        continue;
+      }
+
+      const child = getChild(childTag, key, value);
+      el.appendChild(child);
+    }
   }
 
   static update(newValue: unknown, key: string, isDelete: boolean) {
@@ -204,29 +222,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static handlers: HandlerMap = {
-    text: (value, el, _, isDelete) => {
-      if (isDelete) {
-        return el.remove();
-      }
-
-      el instanceof HTMLElement ? (el.innerText = String(value)) : null;
-    },
-    list: (value, el, key, isDelete) => {
-      if (isDelete) {
-        return el.remove();
-      }
-
-      const childTag = el.getAttribute(attr('template'));
-      if (!childTag || !Array.isArray(value)) {
-        return;
-      }
-
-      const children = value.map((item, i) => {
-        return getChild(childTag, getKey(String(i), key), item);
-      });
-
-      el.replaceChildren(...children);
-    },
+    mark,
     if: (value, el, key) => {
       const isshow = Boolean(value);
       const istemplate = el instanceof HTMLTemplateElement;
@@ -249,25 +245,66 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   };
 }
 
-function getChild(tag: string, prefix: string, value: any) {
-  const child = document.createElement(tag);
-  child.setAttribute(attr('text'), prefix);
-  child.innerText = value;
-  return child;
+function mark(value: unknown, el: Element, key: string, isDelete: boolean) {
+  if (isDelete) {
+    return el.remove();
+  }
+
+  const isObject = typeof value === 'object' && value !== null;
+  if (isObject && Array.isArray(value)) {
+    return array(value, el, key);
+  } else if (isObject) {
+    return object(value, el, key);
+  }
+
+  return text(value, el, key);
 }
 
-function _getChild(tag: string, prefix: string, value: any) {
-  // TODO: Check for sb-list sb-object
-  const child = document.createElement(tag);
-  const slots = child.shadowRoot?.querySelectorAll('slot');
+function text(value: unknown, el: Element, key: string) {
+  let stringVal = String(value == null ? '' : value);
+  if (el instanceof HTMLElement) {
+    el.innerText = stringVal;
+  }
+
+  el.setAttribute(attr('mark'), key);
+}
+
+function array(value: any[], el: Element, key: string) {
+  const childTag = el.getAttribute(attr('child'));
+  if (!childTag) {
+    console.error('marked el with array value has no child', value, el, key);
+    return;
+  }
+
+  const children = value.map((item, i) =>
+    getChild(childTag, getKey(String(i), key), item)
+  );
+
+  el.setAttribute(attr('mark'), key);
+  el.replaceChildren(...children);
+}
+
+function object(value: object, el: Element, key: string) {
+  const childTag = el.getAttribute(attr('child'));
+  if (!childTag) {
+    console.error('marked el with array value has no child', value, el, key);
+    return;
+  }
+
+  const child = getChild(childTag, key, value);
+  child.setAttribute(attr('mark'), key);
+  el.replaceWith(child);
+}
+
+function getChild(tag: string, prefix: string, value: any): HTMLElement {
+  const el = document.createElement(tag);
+  const slots = el.shadowRoot?.querySelectorAll('slot');
   if (
-    !slots ||
-    !slots.length ||
-    (slots.length === 1 && !slots[0]?.getAttribute('name'))
+    !slots?.length ||
+    (slots.length === 1 && !slots[0]?.hasAttribute('name'))
   ) {
-    child.setAttribute(attr('text'), prefix);
-    child.innerText = value;
-    return child;
+    mark(value, el, prefix, false);
+    return el;
   }
 
   for (const slot of slots) {
@@ -276,30 +313,19 @@ function _getChild(tag: string, prefix: string, value: any) {
       continue;
     }
 
-    const key = getKey(sname, prefix);
-    const svalue = value?.[sname] ?? '';
-    const templateName = slot.getAttribute(attr('template'));
-    let schild: HTMLElement;
-    if (templateName) {
-      schild = _getChild(templateName, svalue, key);
-    } else {
-      schild = document.createElement('span');
-      schild.innerText = svalue;
-      schild.setAttribute(attr('text'), key);
-    }
-    schild.setAttribute('slot', sname);
-    child.appendChild(schild);
+    const childTag = slot.getAttribute(attr('child')) ?? 'span';
+    const child = document.createElement(childTag);
+    mark(value?.[sname], child, getKey(sname, prefix), false);
+
+    child.setAttribute('slot', sname);
+    el.appendChild(child);
   }
 
-  return child;
+  return el;
 }
 
 function getKey(prop: string, prefix: string) {
-  if (prefix === '') {
-    return prop;
-  }
-
-  return prefix + '.' + prop;
+  return prefix === '' ? prop : prefix + '.' + prop;
 }
 
 function getValue(key: string, value: any) {
@@ -380,7 +406,12 @@ function watch(key: string, watcher: Watcher) {
   ReactivityHandler.watchers[key]!.push(watcher);
 }
 
-function unwatch(key: string, watcher?: Watcher) {
+function unwatch(key?: string, watcher?: Watcher) {
+  if (!key) {
+    ReactivityHandler.watchers = {};
+    return;
+  }
+
   if (!watcher) {
     delete ReactivityHandler.watchers[key];
     return;
@@ -398,6 +429,7 @@ window.sb = init;
 
 /**
  * TODO:
+ * - [ ] remove sb-object, sb-list, sb-text with sb-mark
  * - [ ] Improve Updations
  *  - [x] changing a list item should not replace all elements
  *  - [x] following are not handled: item delete, push, pop
@@ -421,4 +453,5 @@ window.sb = init;
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Remove esbuild as a devdep
+ *
  */
