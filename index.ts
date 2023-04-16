@@ -1,5 +1,5 @@
 type Complex = object | Function;
-type Meta = { __sb_prefix: string; __sb_dependencies?: number };
+type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
 type Reactive<T extends any> = T extends Complex ? T & Meta : never;
 type Watcher = (newValue: unknown) => unknown;
 type HandlerFunction = (
@@ -9,16 +9,14 @@ type HandlerFunction = (
   isDelete: boolean
 ) => unknown;
 type HandlerMap = Record<string, HandlerFunction>;
-type BasicAttrs = 'mark' | 'child' | 'if';
+type BasicAttrs = 'mark' | 'child' | 'if' | 'plc';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
 let globalData: null | Reactive<{}> = null;
 let globalPrefix = 'sb-';
 
-function attr(key: BasicAttrs) {
-  return globalPrefix + key;
-}
+const attr = (k: BasicAttrs) => globalPrefix + k;
 
 function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
   if (typeof obj !== 'object' || obj === null) {
@@ -74,7 +72,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     const key = getKey(prop, target.__sb_prefix);
     const reactiveValue = reactive(value, key);
     if (typeof value === 'function') {
-      this.setDependencyCount(value, key);
+      this.updateDependents(value, key);
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
@@ -164,39 +162,26 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
 
     this.callHandlers(newValue, key, isDelete);
-    if (!newValue || typeof newValue !== 'object') {
-      return;
-    }
-
-    for (const prop in newValue) {
-      const value = newValue[prop as keyof typeof newValue];
-      const newKey = getKey(prop, key);
-      this.update(value, newKey, false);
-    }
   }
 
   static callHandlers(newValue: unknown, key: string, isDelete: boolean) {
     for (const attrSuffix in this.handlers) {
       const handler = this.handlers[attrSuffix]!;
-      const attrName = globalPrefix + attrSuffix;
-      const query = `[${attrName}='${key}']`;
-      const els = document.querySelectorAll(query);
-
-      for (const el of els) {
-        handler(newValue, el, key, isDelete);
-      }
+      const els = document.querySelectorAll(
+        `[${globalPrefix + attrSuffix}='${key}']`
+      );
+      els.forEach((el) => handler(newValue, el, key, isDelete));
     }
   }
 
-  static setDependencyCount(value: Function, key: string) {
-    const fstring = value.toString();
+  static updateDependents(value: Function, key: string) {
     Object.defineProperty(value, '__sb_dependencies', {
-      value: 0,
+      value: false,
       enumerable: false,
       writable: true,
     });
 
-    for (const matches of fstring.matchAll(dependencyRegex)) {
+    for (const matches of value.toString().matchAll(dependencyRegex)) {
       const dep = matches[0]?.replace('?.', '.');
       if (!dep) {
         continue;
@@ -207,7 +192,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value });
-      (value as Reactive<Function>).__sb_dependencies! += 1;
+      (value as Reactive<Function>).__sb_dependencies = true;
     }
   }
 
@@ -237,25 +222,36 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
 function mark(value: unknown, el: Element, key: string, isDelete: boolean) {
   if (isDelete) {
-    return el.remove();
+    remove(el);
   }
 
-  const isObject = typeof value === 'object' && value !== null;
-  if (isObject && Array.isArray(value)) {
+  if (Array.isArray(value)) {
     return array(value, el, key);
-  } else if (isObject) {
+  } else if (typeof value === 'object' && value !== null) {
     return object(value, el, key);
   }
 
   return text(value, el, key);
 }
 
-function text(value: unknown, el: Element, key: string) {
-  let stringVal = String(value == null ? '' : value);
-  if (el instanceof HTMLElement) {
-    el.innerText = stringVal;
+function remove(el: Element) {
+  const isPlc = el.getAttribute(attr('plc')) === '1';
+  const parent = el.parentElement;
+  if (!isPlc || !(el instanceof HTMLElement) || !parent) {
+    return el.remove();
   }
 
+  if (el.getAttribute(attr('mark')) === parent.getAttribute(attr('mark'))) {
+    return parent.remove();
+  }
+
+  el.remove();
+}
+
+function text(value: unknown, el: Element, key: string) {
+  if (el instanceof HTMLElement && value !== undefined) {
+    el.innerText = String(value);
+  }
   el.setAttribute(attr('mark'), key);
 }
 
@@ -277,8 +273,7 @@ function array(value: any[], el: Element, key: string) {
 function object(value: object, el: Element, key: string) {
   const childTag = el.getAttribute(attr('child'));
   if (!childTag) {
-    console.error('marked el with array value has no child', value, el, key);
-    return;
+    return setSlots(el, key, value);
   }
 
   const child = getChild(childTag, key, value);
@@ -288,30 +283,43 @@ function object(value: object, el: Element, key: string) {
 
 function getChild(tag: string, prefix: string, value: any): HTMLElement {
   const el = document.createElement(tag);
-  const slots = el.shadowRoot?.querySelectorAll('slot');
-  if (
-    !slots?.length ||
-    (slots.length === 1 && !slots[0]?.hasAttribute('name'))
-  ) {
-    mark(value, el, prefix, false);
-    return el;
-  }
+  setSlots(el, prefix, value);
+  return el;
+}
 
-  for (const slot of slots) {
-    const sname = slot.getAttribute('name');
-    if (!sname) {
-      continue;
+function setSlots(el: Element, prefix: string, value: any): void {
+  const slots = el.shadowRoot?.querySelectorAll('slot');
+  if (!slots?.length) {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      value = undefined;
     }
 
-    const childTag = slot.getAttribute(attr('child')) ?? 'span';
-    const child = document.createElement(childTag);
-    mark(value?.[sname], child, getKey(sname, prefix), false);
-
-    child.setAttribute('slot', sname);
-    el.appendChild(child);
+    return mark(value, el, prefix, false);
   }
 
-  return el;
+  el.replaceChildren();
+  for (const slot of slots) {
+    const childTag = slot.getAttribute(attr('child'));
+    const childEl = document.createElement(childTag ?? 'span');
+
+    let childVal = value;
+    let childKey = prefix;
+
+    const sname = slot.getAttribute('name');
+    if (sname) {
+      childVal = value?.[sname];
+      childKey = getKey(sname, prefix);
+      childEl.setAttribute('slot', sname);
+    }
+
+    if (!childTag) {
+      childEl.setAttribute(attr('plc'), '1');
+    }
+
+    mark(childVal, childEl, childKey, false);
+    el.appendChild(childEl);
+  }
+  el.setAttribute(attr('mark'), prefix);
 }
 
 function getKey(prop: string, prefix: string) {
@@ -349,13 +357,8 @@ function getParent(target: Reactive<object>) {
  * External API Code
  */
 export function init(config?: { prefix?: string; handlers?: HandlerMap }) {
-  if (globalData === null) {
-    globalData = reactive({}, '') as {} & Meta;
-  }
-
-  if (config?.prefix) {
-    globalPrefix = config.prefix;
-  }
+  globalData ??= reactive({}, '') as {} & Meta;
+  globalPrefix = config?.prefix ?? globalPrefix;
 
   if (config?.handlers) {
     ReactivityHandler.handlers = {
@@ -375,19 +378,16 @@ export function register() {
       continue;
     }
 
-    customElements.define(
-      tagName,
-      class extends HTMLElement {
-        constructor() {
-          super();
-          const element = template.content.children[0]?.cloneNode(true);
-          if (!element) {
-            return;
-          }
+    const elConstructor = class extends HTMLElement {
+      constructor() {
+        super();
+        const element = template.content.children[0]?.cloneNode(true);
+        if (element) {
           this.attachShadow({ mode: 'open' }).appendChild(element);
         }
       }
-    );
+    };
+    customElements.define(tagName, elConstructor);
   }
 }
 
@@ -424,6 +424,5 @@ export function unwatch(key?: string, watcher?: Watcher) {
  * - [ ] Todo App and async
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
- * - [ ] Remove esbuild as a devdep
  * - [ ] Sync newly inserted nodes with other handlers
  */

@@ -18,7 +18,7 @@
         margin: 0px;
         padding: 0px;
         padding: 1rem;
-        border-bottom: 1px solid pink;
+        border-bottom: 3px solid rgb(219, 126, 155);
       }
 
       main > div > p {
@@ -55,16 +55,22 @@
   </template>
 
   <body>
-    <main style="border: 1px solid pink; width: fit-content; margin: 1rem">
+    <main
+      style="
+        border: 3px solid rgb(219, 126, 155);
+        width: fit-content;
+        margin: 1rem;
+      "
+    >
       <h1>Strawberry - Test</h1>
       <div style="display: flex; justify-content: space-between; padding: 1rem">
         <p style="color: rgb(160, 227, 160)">
-          Success: <span id="success"></span>
+          Success: <span id="success">0</span>
         </p>
         <p style="color: rgb(242, 147, 147)">
-          Failure: <span id="failure"></span>
+          Failure: <span id="failure">0</span>
         </p>
-        <p style="color: gainsboro">Total: <span id="total"></span></p>
+        <p style="color: gainsboro">Total: <span id="total">0</span></p>
       </div>
     </main>
     <script>
@@ -249,11 +255,101 @@
       sb.unwatch();
       delete data.a;
     </script>
+
+    <div id="l1" sb-mark="l1" sb-child="red-p"></div>
     <script>
+      const l1 = document.getElementById('l1');
+      test(l1.childElementCount === 0, 'div#l1 has no children');
+
+      data.l1 = ['a'];
+      test(l1.childElementCount === 1, 'div#l1 has one child');
+      test(l1.children[0]?.innerText === 'a', 'div#l1 child 0 is a');
+      test(
+        l1.children[0]?.tagName.toLowerCase() === 'red-p',
+        'div#l1 child elem is red-p'
+      );
+
+      data.l1.push('b');
+      test(l1.childElementCount === 2, 'div#l1 has two children');
+      test(l1.children[1]?.innerText === 'b', 'div#l1 child 1 is b');
+
+      data.l1.pop();
+      test(l1.childElementCount === 1, 'div#l1 one child removed');
+      test(l1.children[0]?.innerText === 'a', 'div#l1 child 0 is a');
+
+      const ch0 = l1.children[0];
+      data.l1 = ['a'];
+      test(ch0 !== l1.children[0], 'div#l1 children replaced');
+
+      delete data.l1;
+      test(!l1.isConnected, 'div#l1 deleted');
+    </script>
+
+    <template name="div-user">
+      <div>
+        <h1><slot name="name" />notset</h1>
+        <p><slot name="age" />notset</p>
+      </div>
+    </template>
+    <script>
+      sb.register();
+    </script>
+
+    <div-user id="du1" sb-mark="user"></div-user>
+    <script>
+      const du1 = document.getElementById('du1');
+      const du1div = du1.shadowRoot.children[0];
+      test(du1div instanceof HTMLDivElement, 'el#du1 has shadowRoot div');
+
+      const du1h1 = du1div.children[0];
+      test(du1h1 instanceof HTMLHeadingElement, 'el#du1 has a h# element');
+      test(du1h1.innerText === 'notset', 'el#du1>h1 content is placeholder');
+
+      const du1p = du1div.children[1];
+      test(du1p instanceof HTMLParagraphElement, 'el#du1 has a p element');
+      test(du1p.innerText === 'notset', 'el#du1>p content is placeholder');
+      test(
+        document.querySelector('[sb-mark="user.name"]') === null,
+        'user.name not set'
+      );
+      test(
+        document.querySelector('[sb-mark="user.age"]') === null,
+        'user.age not set'
+      );
+
+      data.user = {};
+      const nameSpan = document.querySelector('[sb-mark="user.name"]');
+      const ageSpan = document.querySelector('[sb-mark="user.age"]');
+      test(nameSpan instanceof HTMLSpanElement, 'user.name is a span');
+      test(nameSpan.innerText === '', 'user.name span is empty');
+      test(ageSpan instanceof HTMLSpanElement, 'user.age is a span');
+      test(ageSpan.innerText === '', 'user.age span is empty');
+
+      data.user.name = 'test';
+      test(nameSpan.innerText === 'test', 'user.name span text set');
+      test(ageSpan.innerText === '', 'user.age span still empty');
+
+      data.user.age = 99;
+      test(ageSpan.innerText === '99', 'user.age span text set');
+
+      delete data.user.age;
+      test(!ageSpan.isConnected, 'ageSpan removed on delete');
+
+      data.user.age = 0;
+      test(!ageSpan.isConnected, 'ageSpan still removed after value set');
+
+      data.user = { name: 'TEST', age: 55 };
+
       /**
        * TODO:
-       * - [ ] test nested components update
-       * - [ ] test loop
+       * - [ ] Test Arrays (pop, push, delete)
+       *   - [x] simple arrays with custom elements
+       *   - [ ] object arrays with custom elements
+       * - [ ] Test Objects (name slotted templates)
+       *   - [ ] objects with all values set
+       *   - [ ] objects without all values set
+       *   - [ ] objects with value updates
+       *   - [ ] objects with value deletes
        */
     </script>
   </body>
