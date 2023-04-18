@@ -339,18 +339,62 @@
       test(!ageSpan.isConnected, 'ageSpan still removed after value set');
 
       data.user = { name: 'TEST', age: 55 };
+      test(du1.isConnected, 'el#du1 still connected after reassign');
+      test(du1.children.length === 2, 'el#du1 has two children after reset');
+      test(
+        du1.children[0].innerText === 'TEST',
+        'new user.name span has updated text'
+      );
+      test(
+        du1.children[1].innerText === '55',
+        'new user.age span has updated text'
+      );
 
-      /**
-       * TODO:
-       * - [ ] Test Arrays (pop, push, delete)
-       *   - [x] simple arrays with custom elements
-       *   - [ ] object arrays with custom elements
-       * - [ ] Test Objects (name slotted templates)
-       *   - [ ] objects with all values set
-       *   - [ ] objects without all values set
-       *   - [ ] objects with value updates
-       *   - [ ] objects with value deletes
-       */
+      delete data.user;
+      test(!du1.isConnected, 'el#du1 disconnected after user delete');
+    </script>
+
+    <div sb-mark="users" sb-child="div-user" id="d1"></div>
+    <script>
+      const d1 = document.getElementById('d1');
+      data.users = [];
+      test(d1.children.length === 0, 'el#d1 has no children');
+
+      data.users.push({ name: 'A', age: 1 });
+      test(d1.children.length === 1, 'el#d1 has one child');
+      test(
+        d1.children[0].children[0].innerText === 'A',
+        'el#d1[0][0] innerText is A'
+      );
+      test(
+        d1.children[0].children[1].innerText === '1',
+        'el#d1[0][1] innerText is 1'
+      );
+
+      data.users.push({ name: 'B', age: 2 });
+      test(d1.children.length === 2, 'el#d1 has two children');
+      test(
+        d1.children[0].children[0].innerText === 'A',
+        'el#d1[0][0] innerText is still A'
+      );
+      test(
+        d1.children[0].children[1].innerText === '1',
+        'el#d1[0][1] innerText is still 1'
+      );
+      test(
+        d1.children[1].children[0].innerText === 'B',
+        'el#d1[1][0] innerText is B'
+      );
+      test(
+        d1.children[1].children[1].innerText === '2',
+        'el#d1[1][1] innerText is 1'
+      );
+      delete data.users;
     </script>
   </body>
+  <!-- 
+    TODO: Tests
+    - [ ] Custom Handlers
+    - [ ] Custom Prefix
+   -->
 </html>

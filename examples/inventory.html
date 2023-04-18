@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: plum;
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-items: center;
+        align-items: center;
+      }
+    </style>
+    <script src="../index.js"></script>
+    <title>Inventory</title>
+  </head>
+  <body>
+    <h1>Inventory</h1>
+    <main class="container">
+      <div>
+        <input id="item-name" placeholder="Add item" />
+        <button id="add-button">add</button>
+      </div>
+      <div sb-mark="items" sb-child="p"></div>
+    </main>
+    <script>
+      const data = sb.init();
+      ['itemQtyMap', 'transactions', 'items'].forEach((k) =>
+        sb.watch(k, (v) => console.log(k, v))
+      );
+
+      data.itemQtyMap = {};
+      data.transactions = [];
+      data.items = () => Object.keys(data.itemQtyMap);
+
+      function create(item) {
+        if (item in data.itemQtyMap) {
+          return;
+        }
+
+        data.itemQtyMap[item] = 0;
+      }
+
+      function move(item, quantity) {
+        const stock = data.itemQtyMap[item];
+        if (typeof stock !== 'number' || (quantity < 0 && stock < quantity)) {
+          return false;
+        }
+
+        data.itemQtyMap[item] = quantity + stock;
+        data.transactions.push({ item, quantity });
+        return true;
+      }
+
+      function remove(item) {
+        delete itemQtyMap[item];
+        data.transactions = data.transactions.filter((t) => t.item !== item);
+      }
+
+      document.getElementById('add-button')?.addEventListener('click', () => {
+        const el = document.getElementById('item-name');
+        const value = el?.value;
+        if (typeof value === 'string' && value.length > 0) {
+          create(value);
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<!-- 
+  Create Item, logs items
+  Move Item:
+    - select item from select field
+    - set quantity positive or negative
+    - click add
+    - *action* logs item to transactions
+    
+  TODO: (savestate)
+  - [x] dependents don't update, setting the itemQtyMap should update items
+  - 
+ -->

@@ -81,17 +81,13 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       this.syncTree(target, prop, value);
     }
 
-    for (const dep of this.dependents[key] ?? []) {
-      this.update(dep.computed, dep.key, false);
-    }
-
     this.updateDependencies(key);
     return success;
   }
 
   static updateDependencies(key: string) {
     const dependents = Object.keys(this.dependents)
-      .filter((k) => k.startsWith(key))
+      .filter((k) => k === key || key.startsWith(k + '.'))
       .map((k) => this.dependents[k] ?? [])
       .flat();
 
@@ -157,11 +153,19 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       return;
     }
 
-    for (const watcher of this.watchers?.[key] ?? []) {
-      watcher(newValue);
-    }
-
+    this.callWatchers(newValue, key);
     this.callHandlers(newValue, key, isDelete);
+  }
+
+  static callWatchers(newValue: unknown, key: string) {
+    for (const k of Object.keys(this.watchers)) {
+      if (key === k) {
+        this.watchers[k]?.forEach((cb) => cb(newValue));
+      } else if (key.startsWith(k + '.') && globalData !== null) {
+        const value = getValue(k, globalData);
+        this.watchers[k]?.forEach((cb) => cb(value));
+      }
+    }
   }
 
   static callHandlers(newValue: unknown, key: string, isDelete: boolean) {
@@ -413,15 +417,17 @@ export function unwatch(key?: string, watcher?: Watcher) {
 
 /**
  * TODO:
- * - [?] data can be nested [{v:[{},{x:99}]}] changes should be targeted
+ * - [ ] Create example test apps
  * - [ ] builtin handlers
- *  - [?] input v-model (two way binding?)
- *  - [?] style
+ *   - [?] input v-model (two way binding?)
+ *   - [?] style
  * - [?] Cache computed
- * - [-] Watch array changes
+ * - [-] Check array changes
+ *   - [ ] shift, unshift, reverse
+ *   - [ ] cannot redefine property __sb_prefix
  * - [ ] sync[node]: refresh UI, such as after page load
+ *   - [ ] walk tree and cross check values and marks
  * - [ ] Initialization: values are set after page loads
- * - [ ] Todo App and async
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Sync newly inserted nodes with other handlers
