@@ -6,84 +6,221 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <style>
+      :root {
+        --color-0: plum;
+        --color-1: #f79256;
+        --color-2: #fbd1a2;
+        --color-3: #7dcfb6;
+        --color-4: #00b2ca;
+        --color-5: #1d4e89;
+      }
+
       body {
         font-family: Arial, Helvetica, sans-serif;
-        background-color: plum;
+        background-color: var(--color-2);
         margin: 0;
         width: 100vw;
         height: 100vh;
+      }
+
+      body > main {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      main {
+        padding: 0.5rem;
+        background-color: var(--color-0);
+        border: 2px solid black;
+        width: 400px;
+      }
+
+      h1 {
+        margin: 0px;
+        margin-bottom: 0.5rem;
+        font-size: 1.25rem;
+      }
+
+      input {
+        border: 2px solid black;
+      }
+
+      button {
+        border: 2px solid black;
+        background-color: white;
+        width: 4rem;
+        cursor: pointer;
+        font-style: italic;
+        background-color: var(--color-2);
+      }
+
+      button:hover {
+        background-color: var(--color-1);
+      }
+
+      .container {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: 1fr 0.75fr;
+      }
+
+      .move-form {
+        background-color: var(--color-3);
+        border: 2px solid black;
+        gap: 0.5rem;
+        padding: 0.5rem;
         display: flex;
         flex-direction: column;
-        justify-items: center;
-        align-items: center;
+      }
+
+      #inv-items,
+      #inv-moves {
+        display: flex;
+        flex-direction: column;
+        border: 2px solid black;
+        padding: 0.5rem;
+        gap: 0.5rem;
+
+        max-height: calc(0.5rem * 2 + 2px + 110px);
+        overflow-y: auto;
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+
+      #inv-items {
+        background-color: var(--color-4);
+      }
+
+      #inv-moves {
+        grid-column: 1 / 3;
+        color: white;
+        background-color: var(--color-5);
       }
     </style>
     <script src="../index.js"></script>
     <title>Inventory</title>
   </head>
-  <body>
-    <h1>Inventory</h1>
-    <main class="container">
-      <div>
-        <input id="item-name" placeholder="Add item" />
-        <button id="add-button">add</button>
-      </div>
-      <div sb-mark="items" sb-child="p"></div>
-    </main>
-    <script>
-      const data = sb.init();
-      ['itemQtyMap', 'transactions', 'items'].forEach((k) =>
-        sb.watch(k, (v) => console.log(k, v))
-      );
 
-      data.itemQtyMap = {};
-      data.transactions = [];
-      data.items = () => Object.keys(data.itemQtyMap);
+  <template name="inv-item">
+    <div class="inv-item">
+      <p style="margin: 0"><slot name="name" /></p>
+      <p style="margin: 0"><slot name="quantity" /></p>
 
-      function create(item) {
-        if (item in data.itemQtyMap) {
-          return;
+      <style>
+        .inv-item {
+          display: flex;
+          justify-content: space-between;
+        }
+      </style>
+    </div>
+  </template>
+
+  <template name="inv-move">
+    <div class="inv-move">
+      <p class="mindex"><slot name="index" /></p>
+      <p style="font-style: italic"><slot name="time" /></p>
+      <p style="font-weight: 600"><slot name="item" /></p>
+      <p><slot name="quantity" /></p>
+
+      <style>
+        .inv-move {
+          display: grid;
+          justify-content: space-between;
+          grid-template-columns: 2rem 4rem 1fr 4rem;
         }
 
-        data.itemQtyMap[item] = 0;
+        .inv-move > p {
+          margin: 0;
+          text-align: right;
+        }
+
+        .mindex::after {
+          content: '.';
+        }
+      </style>
+    </div>
+  </template>
+
+  <body>
+    <main>
+      <h1>Inventory</h1>
+      <div class="container">
+        <div id-class="inv-form">
+          <div class="add">
+            <input id="item-name" placeholder="Add item" />
+            <button id="add-button">add</button>
+          </div>
+
+          <div class="move-form" style="margin-top: 0.5rem">
+            <input id="move-item" placeholder="Item to move" />
+            <input id="move-qty" placeholder="Qty to move" />
+            <button sb-disable="cannotMove" id="move-button">move</button>
+          </div>
+        </div>
+
+        <div id="inv-items" sb-mark="items" sb-child="inv-item"></div>
+        <div id="inv-moves" sb-mark="moves" sb-child="inv-move"></div>
+      </div>
+    </main>
+
+    <script>
+      const data = sb.init();
+
+      data.qtys = {};
+      data.moves = [];
+      data.items = () =>
+        Object.keys(data.qtys).map((name) => ({
+          name,
+          quantity: data.qtys[name],
+        }));
+
+      function create(item) {
+        if (item in data.qtys) {
+          return alert(`${item} exists.`);
+        }
+
+        data.qtys[item] = 0;
       }
 
       function move(item, quantity) {
-        const stock = data.itemQtyMap[item];
-        if (typeof stock !== 'number' || (quantity < 0 && stock < quantity)) {
-          return false;
+        const stock = data.qtys[item] ?? 0;
+        if (quantity + stock < 0) {
+          return alert(`Insufficient quantity ${stock} of ${item}.`);
         }
 
-        data.itemQtyMap[item] = quantity + stock;
-        data.transactions.push({ item, quantity });
-        return true;
-      }
-
-      function remove(item) {
-        delete itemQtyMap[item];
-        data.transactions = data.transactions.filter((t) => t.item !== item);
+        data.qtys[item] = quantity + stock;
+        data.moves.push({
+          index: data.moves.length + 1,
+          time: new Date().toTimeString().split(' ')[0],
+          item,
+          quantity,
+        });
       }
 
       document.getElementById('add-button')?.addEventListener('click', () => {
-        const el = document.getElementById('item-name');
-        const value = el?.value;
-        if (typeof value === 'string' && value.length > 0) {
-          create(value);
+        const item = document.getElementById('item-name')?.value;
+        if (typeof item === 'string' && item) {
+          create(item);
         }
       });
+
+      document.getElementById('move-button')?.addEventListener('click', () => {
+        const item = document.getElementById('move-item')?.value;
+        const qty = Number(document.getElementById('move-qty')?.value);
+
+        if (typeof item === 'string' && item && !Number.isNaN(qty)) {
+          move(item, qty);
+        }
+      });
+
+      // Demo Data
+      create('Strawberry');
+      create('Mulberry');
+      move('Strawberry', 7);
+      move('Mulberry', 1);
+      move('Strawberry', -1);
     </script>
   </body>
 </html>
-
-<!-- 
-  Create Item, logs items
-  Move Item:
-    - select item from select field
-    - set quantity positive or negative
-    - click add
-    - *action* logs item to transactions
-    
-  TODO: (savestate)
-  - [x] dependents don't update, setting the itemQtyMap should update items
-  - 
- -->
