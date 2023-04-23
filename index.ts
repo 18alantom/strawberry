@@ -431,4 +431,5 @@ export function unwatch(key?: string, watcher?: Watcher) {
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Sync newly inserted nodes with other handlers
+ * - [ ] Add copyright message into the built file
  */

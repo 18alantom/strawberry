@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Strawberry</title>
+    <link rel="shortcut icon" href="assets/sb.png" />
+    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      #leadin > p,
+      #simple-example {
+        margin: 0;
+      }
+    </style>
+
+    <!-- Loading Highlight JS -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"
+      integrity="sha512-bgHRAiTjGrzHzLyKOnpFvaEpGzJet3z4tZnXGjpsCcqOnAH6VGUx9frc5bcIhKTVLEiCO6vEhNAgx5jtLUYrfA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <link rel="stylesheet" href="assets/hljs-html.css" />
+    <script>
+      window.addEventListener('DOMContentLoaded', (event) => {
+        document.querySelectorAll('pre code').forEach((el) => {
+          hljs.highlightElement(el);
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div id="banner"></div>
+      <h1>Strawberry</h1>
+      <p>Zero-dependecy, build-free framework for the artisanal web.</p>
+    </header>
+
+    <!-- Lead-in Section -->
+    <section id="leadin">
+      <p>
+        Strawberry is a tiny (< 2KB) JS framework that grants a webpage
+        reactivity and composibiltity. It does this with zero-dependencies, all
+        while managing to fit in less than 500 lines of JavaScript.
+      </p>
+    </section>
+
+    <!-- Simple Example -->
+    <pre id="simple-example"><code>&lt;!-- Define Components --&gt;
+&lt;template name="plum-p"&gt;
+  &lt;p style="color: plum"&gt;&lt;slot /&gt;&lt;/p&gt;
+&lt;/template&gt;
+
+&lt;!-- Initialize Strawberry --&gt;
+&lt;script&gt;
+  const data = sb.init();
+&lt;/script&gt;
+
+&lt;!-- Use Components --&gt;
+&lt;plum-p sb-mark="message"&gt;A plum colored p element!&lt;/plum-p&gt;
+
+&lt;!-- Dynamically Update Components --&gt;
+&lt;script&gt;
+  data.message = 'Hello, World!';
+&lt;/script&gt;</code></pre>
+
+    <!-- Nav Bar -->
+    <nav class="navbar">
+      <a href="https://github.com/18alantom/strawberry">Github</a>
+      <a href="https://github.com/18alantom/strawberry">Docs</a>
+      <a
+        href="https://github.com/18alantom/strawberry"
+        style="margin-left: auto"
+        >How it works</a
+      >
+      <a href="https://github.com/18alantom/strawberry">Basket of hacks</a>
+      <a href="https://github.com/18alantom/strawberry">Working example</a>
+    </nav>
+
+    <section id="usecase" class="block">
+      <h2>Usecase</h2>
+      <p>
+        Strawberry is <em>not</em> an alternative to React, Vue, Swelte, etc. It
+        is meant as an alternative to Vanilla JS (hence the name).
+      </p>
+      <p>
+        It's meant to be used to make simple web pages that are expected to last
+        without having to maintain them.
+      </p>
+      <p>
+        Which is why the way of using Strawberry is by copying it instead of
+        linking it.
+      </p>
+    </section>
+
+    <!-- Setup -->
+    <section id="setup" class="block">
+      <h2>Setup</h2>
+      <p>Link or download and use</p>
+    </section>
+
+    <!-- Motivation -->
+    <section id="motivation" class="block">
+      <h2>Motivation</h2>
+      <p>
+        I wanted to add some reactivity and composibility to my blog without
+        having to rely on the usual frontend frameworks and their murder of
+        dependencies.
+      </p>
+
+      <p>
+        All of which on annual revisitation, instead of showing me my website
+        after an innocuous <code>yarn build</code>, sprawl my terminal with
+        scary red text—a portent of wasted hours.
+      </p>
+
+      <cite> If it ran then. It should run now. </cite>
+      <p>
+        And so it was created after an afternoon experiment with JavaScript. A
+        framework for people who just want to write some simple JavaScript that
+        runs in a browser without having to <em>build</em> things that probably
+        might not.
+      </p>
+    </section>
+    <footer>
+      <p>Made with luv by <a href="https://twitter.com/18alantom">Alan</a></p>
+      <p>©2023 Released under the MIT License</p>
+    </footer>
+  </body>
+</html>

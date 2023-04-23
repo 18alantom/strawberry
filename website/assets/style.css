@@ -1,0 +1,149 @@
+:root {
+  /* Whites (yellow) */
+  --white-light: hsla(43, 58%, 95%, 1);
+  --white: hsla(43, 58%, 92%, 1);
+  --white-dark: hsla(43, 78%, 72%, 1);
+
+  --gray-light: hsla(43, 10%, 75%, 1);
+  --gray: #5c6370;
+  --black: #342f3a;
+  /* Browns */
+  --brown-light: hsla(32, 46%, 60%, 1);
+  --brown: hsla(25, 37%, 37%, 1);
+  --brown-dark: hsla(17, 48%, 16%, 1);
+  /* Reds */
+  --red-light: hsla(6, 64%, 59%, 0.25);
+  --red: hsla(6, 64%, 59%, 1);
+  --red-dark: hsla(6, 44%, 49%, 1);
+  /* Other */
+  --green: hsla(69, 44%, 56%, 1);
+
+  --border: 2px solid var(--brown-dark);
+  --shadow: -4px 4px 0px rgba(0, 0, 0, 0.25);
+  --text-shadow: -2px 2px 0px rgba(0, 0, 0, 0.6);
+}
+
+/* 
+ * Block Component Definition
+ */
+
+.block {
+  border: var(--border);
+  box-shadow: var(--shadow);
+  background-color: var(--white);
+}
+
+.block > h2 {
+  font-size: 0.85rem;
+  border-bottom: var(--border);
+  padding: 0.25rem;
+  margin: 0;
+  color: var(--white);
+  text-shadow: var(--text-shadow);
+  background-color: var(--red);
+}
+
+.block > p {
+  margin: 0;
+  padding: 0.25rem 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.block > cite {
+  display: block;
+  font-style: normal;
+  width: fit-content;
+  padding: 0.25rem 0.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--brown-light);
+}
+
+.block > p:last-child {
+  margin-bottom: 0rem;
+}
+
+/* 
+ * Navbar definition
+ */
+
+.navbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.navbar > a {
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--brown-dark);
+  padding: 0.125rem 0.5rem;
+  margin: 0;
+  background-color: var(--green);
+
+  border: var(--border);
+  box-shadow: var(--shadow);
+}
+
+/* 
+ * Default Style Overrides
+ */
+
+body {
+  margin: 2rem;
+  color: var(--brown-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+
+  background-color: var(--white-light);
+}
+
+header > * {
+  margin: 0rem;
+}
+
+header > div {
+  width: 100%;
+  height: 64px;
+  background-image: url('sb.png');
+  background-size: 64px;
+
+  background-repeat: repeat-x;
+  background-position: -10px 0;
+}
+
+header > h1 {
+  margin-top: 2rem;
+  font-size: 3.5rem;
+  color: var(--black);
+  text-shadow: -2px 2px 0px var(--red), -4px 4px 0px var(--red-dark);
+  margin-bottom: 0.5rem;
+}
+
+header > p {
+  color: var(--red-dark);
+  font-size: 1.5rem;
+}
+
+h1,
+h2 {
+  font-family: 'Press Start 2P', Arial, Helvetica, sans-serif;
+}
+
+p,
+a,
+cite {
+  font-family: 'VT323', Arial, Helvetica, sans-serif;
+  font-size: 22px;
+}
+
+code {
+  font-family: 'VT323', monospace;
+}
+
+em {
+  font-style: normal;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+  background-color: var(--red-light);
+}
