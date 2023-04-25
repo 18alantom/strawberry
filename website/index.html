@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Strawberry</title>
+    <title>Strawberry - The Zero-Dependency, Build-Free Framework</title>
     <link rel="shortcut icon" href="assets/sb.png" />
     <link rel="stylesheet" href="assets/style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -40,7 +40,13 @@
   <body>
     <!-- Header -->
     <header>
-      <div id="banner"></div>
+      <a
+        href="https://www.pixilart.com/art/strawberry-sr27182e5bff14b"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <div id="banner"></div>
+      </a>
       <h1>Strawberry</h1>
       <p>Zero-dependecy, build-free framework for the artisanal web.</p>
     </header>
@@ -75,15 +81,37 @@
 
     <!-- Nav Bar -->
     <nav class="navbar">
-      <a href="https://github.com/18alantom/strawberry">Github</a>
-      <a href="https://github.com/18alantom/strawberry">Docs</a>
       <a
         href="https://github.com/18alantom/strawberry"
+        target="_blank"
+        rel="noreferrer"
+        >Github</a
+      >
+      <a
+        href="https://github.com/18alantom/strawberry"
+        target="_blank"
+        rel="noreferrer"
+        >Docs</a
+      >
+      <a
+        href="https://github.com/18alantom/strawberry"
+        target="_blank"
+        rel="noreferrer"
         style="margin-left: auto"
         >How it works</a
       >
-      <a href="https://github.com/18alantom/strawberry">Basket of hacks</a>
-      <a href="https://github.com/18alantom/strawberry">Working example</a>
+      <a
+        href="https://github.com/18alantom/strawberry"
+        target="_blank"
+        rel="noreferrer"
+        >Basket of hacks</a
+      >
+      <a
+        href="https://github.com/18alantom/strawberry"
+        target="_blank"
+        rel="noreferrer"
+        >Analogies</a
+      >
     </nav>
 
     <section id="usecase" class="block">
@@ -102,15 +130,51 @@
       </p>
     </section>
 
+    <!-- Basic Setup -->
+    <section id="setup" class="block">
+      <h2>Basic Setup</h2>
+      <p>For a basic setup, run this command:</p>
+      <pre><code>curl -o- https://raw.githubusercontent.com/18alantom/strawberry/setup.sh | bash</code></pre>
+      <p>
+        The command downloads and runs a
+        <a
+          href="https://github.com/18alantom/strawberry"
+          target="_blank"
+          rel="noreferrer"
+          >shell script</a
+        >
+        that will create a folder with an <code>index.html</code> and
+        <code>strawberry.js</code> file consisting of simple "Hello, World!"
+        program using Strawberry.
+      </p>
+      <p>
+        To verify that setup succeded, run the created
+        <code>index.html</code> file and check the console for the
+        <code>window.sb</code> object.
+      </p>
+    </section>
+
     <!-- Setup -->
     <section id="setup" class="block">
-      <h2>Setup</h2>
-      <p>Link or download and use</p>
+      <h2>Link Setup</h2>
+      <p>
+        To use a link instead of a copy and paste the following script tag at
+        the top of your <code>index.html</code>:
+      </p>
+      <pre><code>&lt;script
+  src=&quot;https://cdnjs.cloudflare.com/ajax/libs/placeholder.min.js&quot;
+  integrity=&quot;sha512-placeholder&quot;
+  crossorigin=&quot;anonymous&quot;
+  referrerpolicy=&quot;no-referrer&quot;
+&gt;&lt;/script&gt;</code></pre>
+      <p>
+        Once that is done the <code>window.sb</code> object should be defined.
+      </p>
     </section>
 
     <!-- Motivation -->
     <section id="motivation" class="block">
-      <h2>Motivation</h2>
+      <h2 style="background-color: var(--green)">Motivation</h2>
       <p>
         I wanted to add some reactivity and composibility to my blog without
         having to rely on the usual frontend frameworks and their murder of
@@ -120,7 +184,7 @@
       <p>
         All of which on annual revisitation, instead of showing me my website
         after an innocuous <code>yarn build</code>, sprawl my terminal with
-        scary red text—a portent of wasted hours.
+        scary red text, a portent of wasted hours.
       </p>
 
       <cite> If it ran then. It should run now. </cite>
@@ -131,6 +195,41 @@
         might not.
       </p>
     </section>
+    <section class="block">
+      <h2 style="background-color: var(--green)">
+        Douglas Crockford on the XML of today
+      </h2>
+      <p>
+        Excerpts from the CoRecursive podcast on
+        <a
+          href="https://corecursive.com/json-vs-xml-douglas-crockford/"
+          target="_blank"
+          rel="noreferrer"
+          >JSON vs XML</a
+        >.
+      </p>
+      <cite>
+        It’s probably the JavaScript frameworks. They have gotten so big and so
+        weird. People seem to love them. I don’t understand why.
+      </cite>
+      <p>And on web APIs.</p>
+      <cite
+        >...the browsers have actually gotten pretty good. The web standards
+        thing have finally worked, and the web API is stable pretty much. Some
+        of it’s still pretty stupid, but it works and it’s reliable.</cite
+      >
+
+      <p>
+        Read the transcript on
+        <a
+          href="https://corecursive.com/json-vs-xml-douglas-crockford/#javascript-frameworks"
+          target="_blank"
+          rel="noreferrer"
+          >CoRecursive.</a
+        >
+      </p>
+    </section>
+
     <footer>
       <p>Made with luv by <a href="https://twitter.com/18alantom">Alan</a></p>
       <p>©2023 Released under the MIT License</p>

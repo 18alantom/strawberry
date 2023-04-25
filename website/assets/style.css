@@ -4,8 +4,9 @@
   --white: hsla(43, 58%, 92%, 1);
   --white-dark: hsla(43, 78%, 72%, 1);
 
+  --gray-lighter: hsla(43, 10%, 75%, 0.35);
   --gray-light: hsla(43, 10%, 75%, 1);
-  --gray: #5c6370;
+  --gray: hsla(240, 4%, 50%, 1);
   --black: #342f3a;
   /* Browns */
   --brown-light: hsla(32, 46%, 60%, 1);
@@ -20,7 +21,7 @@
 
   --border: 2px solid var(--brown-dark);
   --shadow: -4px 4px 0px rgba(0, 0, 0, 0.25);
-  --text-shadow: -2px 2px 0px rgba(0, 0, 0, 0.6);
+  --text-shadow: -2px 2px 0px rgba(0, 0, 0, 1);
 }
 
 /* 
@@ -43,7 +44,16 @@
   background-color: var(--red);
 }
 
+.block > h3 {
+  color: var(--gray);
+  text-decoration: underline;
+  font-weight: bold;
+  padding: 0.5rem 0.25rem 0.25rem 0.25rem;
+  margin: 0;
+}
+
 .block > p {
+  /* font-weight: bold; */
   margin: 0;
   padding: 0.25rem 0.25rem;
   margin-bottom: 0.5rem;
@@ -53,9 +63,16 @@
   display: block;
   font-style: normal;
   width: fit-content;
-  padding: 0.25rem 0.25rem;
-  margin-bottom: 0.5rem;
-  color: var(--brown-light);
+  padding: 0rem 0.25rem;
+  margin: 0.5rem 0.25rem;
+  color: var(--gray);
+  border-left: 2px solid var(--gray);
+  background-color: var(--gray-lighter);
+}
+
+.block > pre code.hljs {
+  margin: 0.25rem;
+  box-shadow: none;
 }
 
 .block > p:last-child {
@@ -95,14 +112,21 @@ body {
   flex-direction: column;
   gap: 2rem;
 
+  max-width: calc(820px - 4rem);
   background-color: var(--white-light);
+}
+
+@media screen and (min-width: 820px) {
+  body {
+    margin: 2rem auto;
+  }
 }
 
 header > * {
   margin: 0rem;
 }
 
-header > div {
+header > a > div {
   width: 100%;
   height: 64px;
   background-image: url('sb.png');
@@ -127,23 +151,27 @@ header > p {
 
 h1,
 h2 {
-  font-family: 'Press Start 2P', Arial, Helvetica, sans-serif;
+  font-family: 'Press Start 2P', monospace;
 }
 
+h3,
 p,
 a,
-cite {
-  font-family: 'VT323', Arial, Helvetica, sans-serif;
-  font-size: 22px;
-}
-
+cite,
 code {
   font-family: 'VT323', monospace;
+  font-size: 22px;
 }
 
 em {
   font-style: normal;
   margin: 0 -0.25rem;
   padding: 0 0.25rem;
-  background-color: var(--red-light);
+  background-color: var(--gray-lighter);
+}
+
+p > code {
+  color: var(--gray);
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
 }
