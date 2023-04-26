@@ -5,8 +5,9 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "js": "esbuild . --bundle --format=iife --global-name=sb | tee index.js | wc -c",
-    "size": "./dist.sh --size"
+    "dev": "esbuild . --bundle --format=iife --global-name=sb --watch --outfile=index.js",
+    "size": "./dist.sh --size",
+    "build": "./dist.sh"
   },
   "devDependencies": {
     "esbuild": "^0.17.15",

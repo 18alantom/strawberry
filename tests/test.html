@@ -4,73 +4,23 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      html,
-      body {
-        margin: 0px;
-        background-color: rgb(0, 0, 0);
-        color: white;
-        font-family: Arial, Helvetica, sans-serif;
-      }
-
-      main > h1 {
-        color: rgb(219, 126, 155);
-        margin: 0px;
-        padding: 0px;
-        padding: 1rem;
-        border-bottom: 3px solid rgb(219, 126, 155);
-      }
-
-      main > div > p {
-        margin: 0px;
-      }
-    </style>
     <title>Strawberry - Test</title>
-    <script src="index.js"></script>
-    <script>
-      let i = 0;
-      let success = 0;
-      let failure = 0;
-      function test(truthy, message) {
-        const idx = String(i).padStart(3, '0');
-        if (truthy) {
-          console.log(`🟢 ${idx} - ${message}`);
-          success += 1;
-          document.getElementById('success').innerText = success;
-        } else {
-          console.error(`🔴 ${idx} - ${message}`);
-          failure += 1;
-          document.getElementById('failure').innerText = failure;
-        }
-
-        document.getElementById('total').innerText = success + failure;
-        i += 1;
-      }
-    </script>
+    <script src="../index.js"></script>
+    <link rel="stylesheet" href="test.css" />
+    <script src="./test.js"></script>
   </head>
   <template name="red-p">
     <p style="color: red">
       <slot />
     </p>
   </template>
-
   <body>
-    <main
-      style="
-        border: 3px solid rgb(219, 126, 155);
-        width: fit-content;
-        margin: 1rem;
-      "
-    >
-      <h1>Strawberry - Test</h1>
-      <div style="display: flex; justify-content: space-between; padding: 1rem">
-        <p style="color: rgb(160, 227, 160)">
-          Success: <span id="success">0</span>
-        </p>
-        <p style="color: rgb(242, 147, 147)">
-          Failure: <span id="failure">0</span>
-        </p>
-        <p style="color: gainsboro">Total: <span id="total">0</span></p>
+    <main>
+      <h1>Sb - General Test</h1>
+      <div>
+        <p>Success: <span id="success">0</span></p>
+        <p>Failure: <span id="failure">0</span></p>
+        <p>Total: <span id="total">0</span></p>
       </div>
     </main>
     <script>
@@ -396,5 +346,6 @@
     TODO: Tests
     - [ ] Custom Handlers
     - [ ] Custom Prefix
+    - [ ] Nested Components, with inner mark and update
    -->
 </html>

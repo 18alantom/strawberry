@@ -360,7 +360,8 @@ function getParent(target: Reactive<object>) {
 /**
  * External API Code
  */
-export function init(config?: { prefix?: string; handlers?: HandlerMap }) {
+type Config = { prefix?: string; handlers?: HandlerMap };
+export function init(config?: Config) {
   globalData ??= reactive({}, '') as {} & Meta;
   globalPrefix = config?.prefix ?? globalPrefix;
 
@@ -375,11 +376,31 @@ export function init(config?: { prefix?: string; handlers?: HandlerMap }) {
   return globalData;
 }
 
-export function register() {
-  for (const template of document.getElementsByTagName('template')) {
+export async function load(files: string | string[]) {
+  if (typeof files === 'string') {
+    files = [files];
+  }
+
+  for (const file of files) {
+    const root = document.createElement('div');
+    const html = await fetch(file)
+      .then((r) => r.text())
+      .catch((e) => console.error(e));
+    if (typeof html !== 'string') {
+      continue;
+    }
+
+    root.innerHTML = html;
+    register(root);
+  }
+}
+
+export function register(rootElement?: HTMLElement) {
+  let root = rootElement ?? document;
+  for (const template of root.getElementsByTagName('template')) {
     const tagName = template.getAttribute('name');
     if (!tagName || !!customElements.get(tagName)) {
-      continue;
+      return;
     }
 
     const elConstructor = class extends HTMLElement {
@@ -417,10 +438,7 @@ export function unwatch(key?: string, watcher?: Watcher) {
 
 /**
  * TODO:
- * - [ ] Create example test apps
- * - [ ] builtin handlers
- *   - [?] input v-model (two way binding?)
- *   - [?] style
+ * - [ ] Don't use shadow dom for templates
  * - [?] Cache computed
  * - [-] Check array changes
  *   - [ ] shift, unshift, reverse
@@ -431,5 +449,5 @@ export function unwatch(key?: string, watcher?: Watcher) {
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Sync newly inserted nodes with other handlers
- * - [ ] Add copyright message into the built file
+ * - [ ] Show analogies, how something done in vue is done with sb
  */

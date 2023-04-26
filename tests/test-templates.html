@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      html,
+      body {
+        margin: 0px;
+        background-color: rgb(0, 0, 0);
+        color: white;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+    </style>
+    <script src="../index.js"></script>
+    <link rel="stylesheet" href="test.css" />
+    <script src="./test.js"></script>
+    <script type="module">
+      const data = sb.init();
+      await sb.load('./templates.html');
+
+      test(customElements.get('red-p'), 'external red-p is defined');
+      test(customElements.get('green-p'), 'external green-p is defined');
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>Sb - Templates Test</h1>
+      <div>
+        <p>Success: <span id="success">0</span></p>
+        <p>Failure: <span id="failure">0</span></p>
+        <p>Total: <span id="total">0</span></p>
+      </div>
+    </main>
+    <red-p>Red</red-p>
+    <green-p>Green</green-p>
+  </body>
+</html>
