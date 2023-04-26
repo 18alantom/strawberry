@@ -101,6 +101,24 @@
   box-shadow: var(--shadow);
 }
 
+.copy {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.copy:hover::before {
+  content: attr(data-copy);
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.125rem 0.5rem;
+  background-color: var(--green);
+  color: var(--black);
+  z-index: 1;
+  box-shadow: var(--shadow);
+}
+
 /* 
  * Default Style Overrides
  */

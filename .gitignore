@@ -2,4 +2,5 @@
 index.js
 ./index.html
 /temp
+**/temp*
 notes.md

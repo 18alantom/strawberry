@@ -22,6 +22,7 @@ index_html=$(cat <<EOF
 
   <style>
     body {
+      background: hsla(43, 58%, 95%, 1);
       height: 100vh;
       width: 100vw;
       display: flex;
@@ -39,11 +40,14 @@ index_html=$(cat <<EOF
         border: 2px solid hsla(17, 48%, 16%, 1);
         box-shadow: -4px 4px 0px rgba(0, 0, 0, 0.25);
       "
-    ></div>
+    >
+      <slot />
+    </div>
   </template>
   <template name="sb-h1">
     <h1
       style="
+        margin: 0;
         font-family: sans-serif;
         font-weight: bold;
         width: fit-content;
@@ -62,7 +66,7 @@ index_html=$(cat <<EOF
   <!-- HTML Body -->
   <body>
     <!-- Use defined components -->
-    <sb-block>      
+    <sb-block>
       <sb-h1 sb-mark="message">Hello, World!</sb-h1>
     </sb-block>
 
