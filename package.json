@@ -1,14 +1,12 @@
 {
   "name": "strawberry",
-  "version": "0.0.1",
+  "version": "0.0.0-alpha.0",
   "description": "Single file frontend framework for Single File Applications",
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
     "js": "esbuild . --bundle --format=iife --global-name=sb | tee index.js | wc -c",
-    "size": "yarn run fullsize && yarn run minfsize",
-    "fullsize": "esbuild . --bundle | tee temp.js | wc -c | awk '{printf \"full uncomp: %.4f KB\\n\", $1/1024 }' && gzip -c temp.js | wc -c | awk '{printf \"full gzippd: %.4f KB\\n\", $1/1024}' && rm temp.js",
-    "minfsize": "esbuild . --bundle --minify | tee temp.js | wc -c | awk '{printf \"minf uncomp: %.4f KB\\n\", $1/1024 }' && gzip -c temp.js | wc -c | awk '{printf \"minf gzippd: %.4f KB\\n\", $1/1024}' && rm temp.js"
+    "size": "./dist.sh --size"
   },
   "devDependencies": {
     "esbuild": "^0.17.15",

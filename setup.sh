@@ -78,4 +78,4 @@ EOF
 echo "$index_html" > index.html
 cd ..
 echo "sb-starter setup completed
-open index.html and start coding :)"
+open sb-starter/index.html and start coding :)"

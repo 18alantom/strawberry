@@ -54,14 +54,16 @@
     <!-- Lead-in Section -->
     <section id="leadin">
       <p>
-        Strawberry is a tiny (< 2KB) JS framework that grants a webpage
-        reactivity and composibiltity. It does this with zero-dependencies, all
-        while managing to fit in less than 500 lines of JavaScript.
+        Strawberry is a tiny JS framework that grants a webpage reactivity and
+        composibiltity. It does this with zero-dependencies and without a build
+        step. All while managing to fit in less than 3KB.
       </p>
     </section>
 
     <!-- Simple Example -->
-    <pre id="simple-example"><code>&lt;!-- Define Components --&gt;
+    <pre
+      id="simple-example"
+    ><code class="copy" data-copy="copy">&lt;!-- Define Components --&gt;
 &lt;template name="plum-p"&gt;
   &lt;p style="color: plum"&gt;&lt;slot /&gt;&lt;/p&gt;
 &lt;/template&gt;
@@ -112,6 +114,7 @@
         rel="noreferrer"
         >Analogies</a
       >
+      <a href="./inventory.html" target="_blank" rel="noreferrer">Example</a>
     </nav>
 
     <section id="usecase" class="block">
@@ -133,18 +136,18 @@
     <!-- Basic Setup -->
     <section id="setup" class="block">
       <h2>Basic Setup</h2>
-      <p>For a basic setup, run this command:</p>
-      <pre><code>curl -o- https://raw.githubusercontent.com/18alantom/strawberry/setup.sh | bash</code></pre>
+      <p>For a basic setup, run this command in your terminal:</p>
+      <pre><code class="copy" data-copy="copy">curl -so- https://raw.githubusercontent.com/18alantom/strawberry/main/setup.sh | bash</code></pre>
       <p>
-        The command downloads and runs a
+        This will download and run a
         <a
-          href="https://github.com/18alantom/strawberry"
+          href="https://github.com/18alantom/strawberry/blob/main/setup.sh"
           target="_blank"
           rel="noreferrer"
           >shell script</a
         >
-        that will create a folder with an <code>index.html</code> and
-        <code>strawberry.js</code> file consisting of simple "Hello, World!"
+        that creates a folder with two files, <code>index.html</code> and
+        <code>sb.min.js</code> which consists of a simple "Hello, World!"
         program using Strawberry.
       </p>
       <p>
@@ -161,7 +164,7 @@
         To use a link instead of a copy and paste the following script tag at
         the top of your <code>index.html</code>:
       </p>
-      <pre><code>&lt;script
+      <pre><code class="copy" data-copy="copy">&lt;script
   src=&quot;https://cdnjs.cloudflare.com/ajax/libs/placeholder.min.js&quot;
   integrity=&quot;sha512-placeholder&quot;
   crossorigin=&quot;anonymous&quot;
@@ -231,8 +234,28 @@
     </section>
 
     <footer>
-      <p>Made with luv by <a href="https://twitter.com/18alantom">Alan</a></p>
+      <p>
+        Made with luv by
+        <a href="https://twitter.com/18alantom" target="_blank" rel="noreferrer"
+          >Alan</a
+        >
+      </p>
       <p>©2023 Released under the MIT License</p>
     </footer>
   </body>
+  <script>
+    const key = 'data-copy';
+    const success = 'copied :)';
+    for (const el of document.getElementsByClassName('copy')) {
+      el.addEventListener('click', (e) => {
+        navigator.clipboard.writeText(el.innerText);
+
+        const c = el.getAttribute(key);
+        el.setAttribute(key, success);
+        if (c !== success) {
+          setTimeout(() => el.setAttribute('data-copy', c), 1000);
+        }
+      });
+    }
+  </script>
 </html>
