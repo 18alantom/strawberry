@@ -17,7 +17,7 @@ file_header="/* Strawberry $version
  * This is a generated file. Do not edit.*/"
 
 echo "$file_header" >> "$file_path"
-node_modules/.bin/esbuild . --bundle --minify --format=iife --global-name=sb >> "$file_path"
+node_modules/.bin/esbuild ./index.ts --bundle --minify --format=iife --global-name=sb >> "$file_path"
 
 size=$(wc -c < $file_path)
 gzsize=$(gzip -c $file_path | wc -c)

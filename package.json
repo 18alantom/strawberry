@@ -1,13 +1,18 @@
 {
-  "name": "strawberry",
+  "name": "sberry",
   "version": "0.0.0-alpha.0",
-  "description": "Single file frontend framework for Single File Applications",
-  "main": "index.ts",
+  "homepage": "http://18alantom.github.io/strawberry",
+  "description": "Zero-dependecy, build-free framework for the artisanal web.",
+  "main": "dist/sb.min.js",
   "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "dev": "esbuild . --bundle --format=iife --global-name=sb --watch --outfile=index.js",
+    "dev": "esbuild ./index.ts --bundle --format=iife --global-name=sb --watch --outfile=index.js",
     "size": "./dist.sh --size",
-    "build": "./dist.sh"
+    "build": "./dist.sh",
+    "pub": "tsc && yarn build && yarn publish --access public"
   },
   "devDependencies": {
     "esbuild": "^0.17.15",
@@ -19,6 +24,10 @@
     "web": "https://github.com/18alantom"
   },
   "repository": {
-    "url": "https://github.com/18alantom/strawberry"
+    "type": "git",
+    "url": "git+https://github.com/18alantom/strawberry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/18alantom/strawberry/issues"
   }
 }
