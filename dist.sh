@@ -26,9 +26,3 @@ kb=$(echo "scale=3; $size / 1024" | bc)
 gzkb=$(echo "scale=3; $gzsize / 1024" | bc)
 
 echo "dist/sb.min.js is ${kb}KB and gzipped ${gzkb}KB"
-if [ "$1" = "--size" ]; then
-  git checkout "$file_path"
-else
-  git add "$file_path"
-fi
-

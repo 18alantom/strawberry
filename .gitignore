@@ -2,6 +2,6 @@
 index.js
 ./index.html
 /temp
-**/temp*
+**/temp.*
 notes.md
 /dist
