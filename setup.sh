@@ -8,7 +8,7 @@ fi
 mkdir sb-starter
 cd sb-starter
 
-curl -so sb.min.js https://raw.githubusercontent.com/18alantom/strawberry/main/dist/sb.min.js
+curl -so sb.min.js https://unpkg.com/sberry@0.0.0-alpha.1/dist/sb.min.js
 index_html=$(cat <<EOF
 <!DOCTYPE html>
 <html lang="en">

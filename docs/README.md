@@ -29,12 +29,7 @@ If you want to add the functionality of Strawberry to an existing `html` documen
 Add a link to Strawberry to you html's `head` tag:
 
 ```html
-<script
-  src="update-link"
-  integrity="sha512-placeholder"
-  crossorigin="anonymous"
-  referrerpolicy="no-referrer"
-></script>
+<script src="https://unpkg.com/sberry@0.0.0-alpha.1/dist/sb.min.js"></script>
 ```
 
 Or you can download [this file](https://raw.githubusercontent.com/18alantom/strawberry/main/dist/sb.min.js) and add a `script:src` that links to the copy.
@@ -48,7 +43,7 @@ _Note: if you want to run the code make sure you have [`sb.min.js`](https://raw.
 ```html
 <!-- 1. Link Strawberry -->
 <head>
-  <script src="sb.min.js"></script>
+  <script src="https://unpkg.com/sberry@0.0.0-alpha.1/dist/sb.min.js"></script>
 </head>
 
 <!-- 2. Define a Component -->
