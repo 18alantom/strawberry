@@ -1,0 +1,87 @@
+body {
+  margin: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+
+  max-width: calc(820px - 4rem);
+}
+
+header > * {
+  margin: 0rem;
+  display: grid;
+  place-items: center;
+}
+
+header > a > div {
+  width: calc(100% + 1rem);
+  margin-left: -1rem;
+  height: 64px;
+  background: transparent url('sb.png') space 0 0;
+  background-size: 64px;
+}
+
+header > h1 {
+  margin-top: 2rem;
+  font-size: 4.5rem;
+  color: var(--black);
+  text-shadow: -2px 2px 0px var(--red), -4px 4px 0px var(--red-dark);
+  margin-bottom: 0.5rem;
+}
+
+header > p {
+  /* font-weight: bold; */
+  color: var(--red-dark);
+  font-size: 1.75rem;
+}
+
+footer {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media screen and (min-width: 820px) {
+  body {
+    margin: 2rem auto;
+  }
+}
+
+@media screen and (max-width: 820px) {
+  header > h1 {
+    font-size: 3.5rem;
+  }
+
+  header > p {
+    font-size: 1.5rem;
+  }
+}
+
+@media screen and (max-width: 625px) {
+  body {
+    margin: 1rem;
+  }
+
+  header > h1 {
+    margin-top: 1rem;
+    font-size: 3rem;
+  }
+}
+
+@media screen and (max-width: 510px) {
+  header > h1 {
+    font-size: 2.5rem;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  header > h1 {
+    font-size: 2rem;
+  }
+}
+
+@media screen and (max-width: 350px) {
+  header > h1 {
+    font-size: 1.5rem;
+  }
+}

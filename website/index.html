@@ -9,7 +9,14 @@
 
     <title>Strawberry - The Zero-Dependency, Build-Free Framework</title>
     <link rel="shortcut icon" href="assets/sb.png" />
-    <link rel="stylesheet" href="assets/style.css" />
+
+    <!-- Loading Local Styles -->
+    <link rel="stylesheet" href="assets/common.css" />
+    <link rel="stylesheet" href="assets/index.css" />
+    <link rel="stylesheet" href="assets/example.css" />
+    <link rel="stylesheet" href="assets/hljs-html.css" />
+
+    <!-- Loading Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,28 +24,24 @@
       rel="stylesheet"
     />
 
-    <style>
-      #leadin > p,
-      #simple-example {
-        margin: 0;
-      }
-    </style>
-
-    <!-- Loading Highlight JS -->
+    <!-- Loading Highlight JS and Example Manager -->
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"
       integrity="sha512-bgHRAiTjGrzHzLyKOnpFvaEpGzJet3z4tZnXGjpsCcqOnAH6VGUx9frc5bcIhKTVLEiCO6vEhNAgx5jtLUYrfA=="
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
-    <link rel="stylesheet" href="assets/hljs-html.css" />
+    <script src="index.js"></script>
     <script>
-      window.addEventListener('DOMContentLoaded', (event) => {
-        document.querySelectorAll('pre code').forEach((el) => {
-          hljs.highlightElement(el);
-        });
-      });
+      window.addEventListener('DOMContentLoaded', highlight);
+      const m = new Manager();
     </script>
+    <style>
+      #leadin > p,
+      #simple-example {
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
     <!-- Header -->
@@ -57,9 +60,9 @@
     <!-- Lead-in Section -->
     <section id="leadin">
       <p>
-        Strawberry is a tiny JS framework that grants a webpage reactivity and
-        composibiltity. It does this with zero-dependencies and without a build
-        step. All while managing to fit in less than 3KB.
+        Strawberry is a tiny frontend framework that grants a webpage reactivity
+        and composibiltity. It does this with zero-dependencies and without a
+        build step. All while managing to fit in less than 3KB.
       </p>
     </section>
 
@@ -125,19 +128,15 @@
      -->
     </nav>
 
-    <section id="usecase" class="block">
-      <h2>Usecase</h2>
+    <section id="usecase" class="blank-block">
       <p>
-        Strawberry is <em>not</em> an alternative to React, Vue, Swelte, etc. It
-        is meant as an alternative to Vanilla JS.
+        Strawberry is <em>not</em> meant to be an alternative to React, Vue,
+        Swelte, etc. It is meant as an alternative to Vanilla JS.
       </p>
+      <p>It is for simple, long lasting, low maintenance web pages.</p>
       <p>
-        It's meant to be used to make simple web pages that are expected to last
-        without having to maintain them.
-      </p>
-      <p>
-        Which is why the way of using Strawberry is by copying it instead of
-        linking it.
+        Which is why the ideal way of using Strawberry is by copying the source
+        code into your project directory as opposed to linking it.
       </p>
     </section>
 
@@ -178,6 +177,99 @@
       </p>
     </section>
 
+    <div class="sb-break">
+      <hr />
+      <img src="assets/sb.png" />
+      <hr />
+    </div>
+
+    <section class="blank-block">
+      <p>
+        Here's a toy example using Strawberry. An inventory app in which you can
+        add items, move them in and out of a store, and view the movements.
+      </p>
+    </section>
+
+    <!-- Inventory Example -->
+    <div class="toggle">
+      <div id="screen">
+        <!-- Display -->
+        <div id="view" class="codeblock" data-tab="view"></div>
+        <!-- Head Element Editor -->
+        <div class="codeblock" id="head" style="display: none" data-tab="head">
+          <pre><code style="cursor: pointer" class="language-html"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Templates Editor -->
+        <div
+          class="codeblock"
+          id="templates"
+          style="display: none"
+          data-tab="templates"
+        >
+          <pre><code style="cursor: pointer" class="language-html"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Body Element Editor -->
+        <div class="codeblock" id="body" style="display: none" data-tab="body">
+          <pre><code style="cursor: pointer" class="language-html"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Script Element Editor -->
+        <div
+          class="codeblock"
+          id="script"
+          style="display: none"
+          data-tab="script"
+        >
+          <pre><code style="cursor: pointer; " class="language-javascript"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Consolidated HTML Viewer -->
+        <div class="codeblock" id="html" style="display: none" data-tab="html">
+          <pre><code class="language-html"></code></pre>
+        </div>
+      </div>
+
+      <div id="buttons">
+        <div id="tabs">
+          <button data-tab="view" data-active="true">View</button>
+          <button data-tab="head">Head</button>
+          <button data-tab="templates">Templates</button>
+          <button data-tab="body">Body</button>
+          <button data-tab="script">Script</button>
+          <button data-tab="html">HTML</button>
+        </div>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+
+    <section class="blank-block">
+      <p>
+        Click the buttons in the bottom bar to view the different parts of the
+        page.
+      </p>
+      <p>
+        Clicking the code will allow you to edit it in a
+        <code>textarea</code>, switching back to "View" will allow you to see
+        your changes.
+      </p>
+      <p>
+        Clicking "HTML" will show you a readonly consolidated view of the code
+        that runs the app. It's the HTML created by joining all the other parts.
+      </p>
+    </section>
+
+    <div class="sb-break">
+      <hr />
+      <img src="assets/sb.png" />
+      <hr />
+    </div>
+
     <!-- Motivation -->
     <section id="motivation" class="block">
       <h2 style="background-color: var(--green)">Motivation</h2>
@@ -201,6 +293,8 @@
         might not.
       </p>
     </section>
+
+    <!-- Cite Douglas Crockford -->
     <section class="block">
       <h2 style="background-color: var(--green)">
         Douglas Crockford on the XML of today
@@ -238,12 +332,30 @@
 
     <footer>
       <p>
-        Made with luv by
-        <a href="https://twitter.com/18alantom" target="_blank" rel="noreferrer"
+        Made with
+        <img
+          src="assets/heart.png"
+          style="width: 22px; height: 22px; margin-bottom: -5px"
+        />
+        by
+        <a href="https://github.com/18alantom" target="_blank" rel="noreferrer"
           >Alan</a
         >
+
+        <br />
+        Follow development on
+        <a
+          href="https://twitter.com/18alantom"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Twitter
+        </a>
       </p>
-      <p>©2023 Released under the MIT License</p>
+      <p style="text-align: right">
+        ©2023 <br />
+        MIT License
+      </p>
     </footer>
   </body>
   <script>
