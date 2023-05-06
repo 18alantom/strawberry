@@ -5,3 +5,5 @@
 **/temp.*
 notes.md
 /dist
+
+**/*.min.js
