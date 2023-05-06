@@ -57,8 +57,11 @@
 .blank-block > p,
 .block > p {
   margin: 0;
+  margin-bottom: 1rem;
+}
+
+.block > p {
   padding: 0.25rem 0.25rem;
-  margin-bottom: 0.75rem;
 }
 
 .blank-block > cite,
@@ -67,10 +70,16 @@
   font-style: normal;
   width: fit-content;
   padding: 0rem 0.25rem;
-  margin: 0.75rem 0.25rem;
+  margin: 1rem 0.25rem;
   color: var(--gray);
   border-left: 2px solid var(--gray);
   background-color: var(--gray-lighter);
+  box-sizing: border-box;
+}
+
+.blank-block > cite {
+  margin: 1rem 0rem;
+  width: calc(100%);
 }
 
 .block > pre code.hljs {

@@ -449,5 +449,4 @@ export function unwatch(key?: string, watcher?: Watcher) {
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Sync newly inserted nodes with other handlers
- * - [ ] Show analogies, how something done in vue is done with sb
  */
