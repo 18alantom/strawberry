@@ -4,6 +4,8 @@ body {
   flex-direction: column;
   gap: 2.5rem;
 
+  height: 100vh;
+  height: var(--vh);
   max-width: calc(820px - 4rem);
 }
 
@@ -30,7 +32,6 @@ header > h1 {
 }
 
 header > p {
-  /* font-weight: bold; */
   color: var(--red-dark);
   font-size: 1.75rem;
 }

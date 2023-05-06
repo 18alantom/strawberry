@@ -18,6 +18,8 @@
   --red-dark: hsla(6, 44%, 49%, 1);
   /* Other */
   --green: hsla(69, 44%, 56%, 1);
+  --blue: hsla(210, 44%, 46%, 1);
+  --blue-dark: hsla(210, 74%, 36%, 1);
 
   --border: 2px solid var(--brown-dark);
   --shadow: -4px 4px 0px hsla(25, 37%, 47%, 0.35);
@@ -59,12 +61,13 @@
   margin-bottom: 0.75rem;
 }
 
+.blank-block > cite,
 .block > cite {
   display: block;
   font-style: normal;
   width: fit-content;
   padding: 0rem 0.25rem;
-  margin: 0.5rem 0.25rem;
+  margin: 0.75rem 0.25rem;
   color: var(--gray);
   border-left: 2px solid var(--gray);
   background-color: var(--gray-lighter);
@@ -104,6 +107,11 @@
 
   border: var(--border);
   box-shadow: var(--shadow);
+}
+
+.navbar > a:link,
+.navbar > a:visited {
+  color: var(--brown-dark);
 }
 
 .copy {
@@ -161,11 +169,28 @@ h2 {
 h3,
 p,
 a,
+li,
 cite,
 code,
 textarea {
   font-family: 'VT323', monospace;
   font-size: 22px;
+}
+
+li {
+  margin-bottom: 0.5rem;
+  list-style-type: square;
+}
+
+li > b {
+  font-weight: normal;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+  background-color: hsla(69, 54%, 66%, 0.5);
+}
+
+li:last-child {
+  margin-bottom: 0;
 }
 
 em {
@@ -185,4 +210,16 @@ p > br {
   content: ' ';
   display: block;
   margin: 1rem 0;
+}
+
+a {
+  color: var(--blue);
+}
+
+a:link {
+  color: var(--blue);
+}
+
+a:visited {
+  color: var(--blue-dark);
 }

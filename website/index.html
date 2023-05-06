@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="normal" />
-    <meta name="theme-color" content="hsla(43, 58%, 95%, 1)" />
+    <meta name="theme-color" content="#342f3a" />
 
     <title>Strawberry - The Zero-Dependency, Build-Free Framework</title>
     <link rel="shortcut icon" href="assets/sb.png" />
@@ -60,9 +60,9 @@
     <!-- Lead-in Section -->
     <section id="leadin">
       <p>
-        Strawberry is a tiny frontend framework that grants a webpage reactivity
-        and composibiltity. It does this with zero-dependencies and without a
-        build step. All while managing to fit in less than 3KB.
+        Strawberry is a tiny frontend framework that gives you reactivity and
+        composibiltity. It does this with zero-dependencies, without a build
+        step, and it fits in less than 3KB when gzipped.
       </p>
     </section>
 
@@ -103,40 +103,13 @@
         rel="noreferrer"
         >Docs</a
       >
-
-      <!-- 
-      <a
-        href="https://github.com/18alantom/strawberry"
-        target="_blank"
-        rel="noreferrer"
-        style="margin-left: auto"
-        >How it works</a
-      >
-      <a
-        href="https://github.com/18alantom/strawberry"
-        target="_blank"
-        rel="noreferrer"
-        >Basket of hacks</a
-      >
-      <a
-        href="https://github.com/18alantom/strawberry"
-        target="_blank"
-        rel="noreferrer"
-        >Analogies</a
-      >
-      <a href="./inventory.html" target="_blank" rel="noreferrer">Example</a>
-     -->
     </nav>
 
     <section id="usecase" class="blank-block">
       <p>
-        Strawberry is <em>not</em> meant to be an alternative to React, Vue,
-        Swelte, etc. It is meant as an alternative to Vanilla JS.
-      </p>
-      <p>It is for simple, long lasting, low maintenance web pages.</p>
-      <p>
-        Which is why the ideal way of using Strawberry is by copying the source
-        code into your project directory as opposed to linking it.
+        Strawberry is <em>not</em> an alternative to React, Vue, etc. It is an
+        alternative to Vanilla JS. It is meant for simple, long lasting, low
+        maintenance web pages, and <em>tiny</em> web apps.
       </p>
     </section>
 
@@ -162,6 +135,14 @@
         <code>index.html</code> file and check the console for the
         <code>window.sb</code> object.
       </p>
+    </section>
+
+    <section class="blank-block">
+      <p>
+        The ideal way of using Strawberry is by copying the source code into
+        your project directory as opposed to linking it.
+      </p>
+      <p>But if you want to use a link, you can :)</p>
     </section>
 
     <!-- Setup -->
@@ -253,14 +234,26 @@
         Click the buttons in the bottom bar to view the different parts of the
         page.
       </p>
+      <ul>
+        <li><b>Head</b>: contains styles and a script to link Strawberry.</li>
+        <li>
+          <b>Templates</b>: contains templates for inventory list (blue) item
+          and movement item (dark-blue)
+        </li>
+        <li><b>Body</b>: contains the markup of the app.</li>
+        <li>
+          <b>Script</b>: contains Strawberry code, "business logig", click
+          handlers, and demo data.
+        </li>
+        <li>
+          <b>HTML</b>: contains HTML created by consolidating the other parts.
+          This is used to run the app (and is a readonly view).
+        </li>
+      </ul>
       <p>
         Clicking the code will allow you to edit it in a
         <code>textarea</code>, switching back to "View" will allow you to see
         your changes.
-      </p>
-      <p>
-        Clicking "HTML" will show you a readonly consolidated view of the code
-        that runs the app. It's the HTML created by joining all the other parts.
       </p>
     </section>
 
@@ -270,27 +263,34 @@
       <hr />
     </div>
 
-    <!-- Motivation -->
-    <section id="motivation" class="block">
-      <h2 style="background-color: var(--green)">Motivation</h2>
+    <!-- Why -->
+    <section id="why" class="blank-block">
+      <cite style="width: calc(100% - 0.25rem - 4px); box-sizing: border-box">
+        Why did I make this?
+      </cite>
+      <p>I wanted to write a simple website.</p>
       <p>
-        I wanted to add some reactivity and composibility to my blog without
-        having to rely on the usual frontend frameworks and their murder of
-        dependencies.
+        I restrained myself from using the usual frontend frameworks; for my
+        purpose, their murder of dependencies felt like gross computational
+        opulence.
       </p>
-
       <p>
-        All of which on annual revisitation, instead of showing me my website
-        after an innocuous <code>yarn build</code>, sprawl my terminal with
-        scary red text, a portent of wasted hours.
+        These have previously, on annual revisitation, instead of showing me my
+        website after an innocuous <code>yarn build</code>, have sprawled my
+        terminal with scary red text; portent of wasted hours.
       </p>
-
-      <cite> If it ran then. It should run now. </cite>
+      <cite style="width: calc(100% - 0.25rem - 4px); box-sizing: border-box">
+        If it ran then. It should've run now.
+      </cite>
       <p>
-        And so it was created after an afternoon experiment with JavaScript. A
-        framework for people who just want to write some simple JavaScript that
-        runs in a browser without having to <em>build</em> things that probably
-        might not.
+        But as I wrote my website, the need to manually update the UI and
+        redefine components took away from writing the site.
+      </p>
+      <p>
+        And so it was created after an afternoon JavaScript experiment. A
+        framework for people who just want to write simple websites with a
+        smattering of JavaScript without having to <em>build</em> things that
+        probably might not.
       </p>
     </section>
 
@@ -327,6 +327,13 @@
           rel="noreferrer"
           >CoRecursive</a
         >.
+      </p>
+    </section>
+
+    <section class="blank-block">
+      <p>
+        Strawberry will never be one of the aforementioned
+        <em>big and weird</em> JavaScript frameworks :)
       </p>
     </section>
 
