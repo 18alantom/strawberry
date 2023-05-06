@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# file is run through pre-commit
-# to create dist/sb.min.js
-# which is a minified JavaScript file
-# transpiled from index.ts
-# for distribution purposes
+# This file runs on yarn build. It converts index.ts to
+# minified javascript sb.min.js and adds the copyright
+# header file.
+#
+# Finally it prints the normal and gzipped sizes of the file.
 
 rm -rf dist
 mkdir dist
