@@ -64,8 +64,8 @@
   padding: 0.25rem 0.25rem;
 }
 
-.blank-block > cite,
-.block > cite {
+.blank-block > blockquote,
+.block > blockquote {
   display: block;
   font-style: normal;
   width: fit-content;
@@ -77,7 +77,7 @@
   box-sizing: border-box;
 }
 
-.blank-block > cite {
+.blank-block > blockquote {
   margin: 1rem 0rem;
   width: calc(100%);
 }
@@ -179,9 +179,9 @@ h3,
 p,
 a,
 li,
-cite,
 code,
-textarea {
+textarea,
+blockquote {
   font-family: 'VT323', monospace;
   font-size: 22px;
 }
