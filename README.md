@@ -1,6 +1,6 @@
 <div align="center" markdown="1">
 
-<img src="./.github/logo.png" alt="strawberry logo" width="600"/>
+<img src="https://github.com/18alantom/strawberry/assets/29507195/9cb6a348-3b02-4de7-be62-ee85cf594871" alt="strawberry logo" width="720"/>
 
 Zero-dependency, build-free framework for the artisanal web.
 
@@ -13,6 +13,8 @@ Zero-dependency, build-free framework for the artisanal web.
 > Strawberry is in a very experimental phase; pre-alpha. Everything stated below
 > works, but I am still figuring out the quickest and cleanest ways of doing
 > things.
+
+---
 
 > Seriously, another frontend framework?
 
@@ -99,6 +101,7 @@ is set.
 
 ```html
 <p sb-mark="message">Placeholder</p>
+
 <script>
   data.message = 'Hello, Strawberry!';
 </script>
@@ -109,6 +112,7 @@ is set.
 
 ```html
 <p sb-mark="countMessage">Placeholder</p>
+
 <script>
   data.count = 0;
   data.countMessage = () => `The count is: ${data.count}`;
@@ -123,6 +127,7 @@ is set.
 <template sb-if="sayHi">
   <p>Hi!</p>
 </template>
+
 <script>
   data.sayHi = true;
 </script>
@@ -133,6 +138,7 @@ of the `li` are set from the list items.
 
 ```html
 <ul sb-mark="list" sb-child="li"></ul>
+
 <script>
   data.list = ['Strawberry', 'Mulberry', 'Raspberry'];
 </script>
@@ -144,9 +150,11 @@ of the `li` are set from the list items.
 <template name="red-p">
   <p style="color: red"><slot /></p>
 </template>
+
 <script>
   sb.register();
 </script>
+
 <red-p>Hi!</red-p>
 ```
 
@@ -158,6 +166,7 @@ _Note: `sb.register` is not required if `sb.init` is called after template defin
 <script type="module">
   await sb.load('./templates.html');
 </script>
+
 <red-p>Hi!</red-p>
 ```
 
@@ -200,6 +209,8 @@ _Note: `sb.register` is not required if `sb.init` is called after template defin
 ```
 
 ---
+
+
 
 ## Douglas Crockford on the XML of today
 
