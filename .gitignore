@@ -1,6 +1,7 @@
 /node_modules
 /index.js
 /index.html
+/perf.html
 /temp
 **/temp.*
 notes.md

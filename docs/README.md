@@ -1,12 +1,12 @@
 # Docs
 
 Strawberry is a simple frontend framework that gives you reactivity and
-composibility. Here're a couple of things to get you up to speed on using it:
+composability. Here're a couple of things to get you up to speed on using it:
 
 1. [Installation](#installation)
 2. [Getting Started](#getting-started)
 3. Reactivity (to be added)
-4. Composibility (to be added)
+4. Composability (to be added)
 
 ## Installation
 

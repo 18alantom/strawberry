@@ -438,15 +438,75 @@ export function unwatch(key?: string, watcher?: Watcher) {
 
 /**
  * TODO:
- * - [ ] Don't use shadow dom for templates
- * - [?] Cache computed
- * - [-] Check array changes
- *   - [ ] shift, unshift, reverse
- *   - [ ] cannot redefine property __sb_prefix
+ * - [ ] Don't use shadow dom for templates?
+ * - [ ] Cache computed?
+ * - [ ] Cache el references?
+ * - [ ] Check array changes: shift, unshift, reverse
+ * - [ ] cannot redefine property __sb_prefix
  * - [ ] sync[node]: refresh UI, such as after page load
- *   - [ ] walk tree and cross check values and marks
+ * - [ ] walk sub-trees and cross check values and marks
  * - [ ] Initialization: values are set after page loads
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Sync newly inserted nodes with other handlers
+ * - [ ] Remove the need for `sb.register`
+ * - [ ] Allow preset values to be loaded as el is inserted
  */
+
+/**
+# Notes
+
+TODO: Move these elsewhere maybe
+
+## Performance Numbers
+
+All times are in ms. `performance.mark` is neutered for sec hence low res.
+  
+divs:    1_000
+|             append | min:    1.900 | max:    3.600 | avg:    2.800 |
+|     getElementById | min:    0.000 | max:    0.100 | avg:    0.025 |
+|   querySelectorAll | min:    0.000 | max:    0.100 | avg:    0.025 |
+|             remove | min:    0.700 | max:    1.200 | avg:    0.875 |
+
+divs:   10_000
+|             append | min:   23.000 | max:   27.500 | avg:   24.650 |
+|     getElementById | min:    0.000 | max:    0.000 | avg:    0.000 |
+|   querySelectorAll | min:    0.100 | max:    0.200 | avg:    0.125 |
+|             remove | min:    9.700 | max:   14.300 | avg:   12.175 |
+
+divs:   10_000 (With body MutationObserver)
+|             append | min:   35.800 | max:   49.400 | avg:   40.125 |
+|     getElementById | min:    0.000 | max:    0.100 | avg:    0.025 |
+|   querySelectorAll | min:    0.200 | max:    0.300 | avg:    0.250 |
+|             remove | min:   29.400 | max:   34.700 | avg:   32.975 |
+
+divs:   10_000 (With body MutationObserver disconnected)
+|             append | min:   14.900 | max:   22.900 | avg:   16.975 |
+|     getElementById | min:    0.000 | max:    0.000 | avg:    0.000 |
+|   querySelectorAll | min:    0.200 | max:    0.300 | avg:    0.225 |
+|             remove | min:    5.000 | max:    6.900 | avg:    5.725 |
+
+divs:  100_000
+|             append | min:  284.000 | max:  328.700 | avg:  310.500 |
+|     getElementById | min:    0.000 | max:    0.100 | avg:    0.025 |
+|   querySelectorAll | min:    1.300 | max:    1.400 | avg:    1.325 |
+|             remove | min:  107.800 | max:  140.200 | avg:  123.900 |
+
+divs:  100_000 (With body MutationObserver)
+|             append | min:  509.800 | max:  578.700 | avg:  556.625 |
+|     getElementById | min:    0.000 | max:    0.100 | avg:    0.025 |
+|   querySelectorAll | min:    3.400 | max:    4.400 | avg:    3.925 |
+|             remove | min:  353.000 | max:  437.700 | avg:  403.125 |
+
+divs:  100_000 (With body MutationObserver disconnected)
+|             append | min:  290.400 | max:  360.200 | avg:  317.175 |
+|     getElementById | min:    0.000 | max:    0.100 | avg:    0.050 |
+|   querySelectorAll | min:    1.200 | max:    1.400 | avg:    1.300 |
+|             remove | min:  108.200 | max:  120.300 | avg:  115.925 |
+
+divs: 1_000_000
+|             append | min: 1250.500 | max: 1360.500 | avg: 1311.200 |
+|     getElementById | min:    0.000 | max:    0.100 | avg:    0.025 |
+|   querySelectorAll | min:   12.300 | max:   15.500 | avg:   13.875 |
+|             remove | min:  508.900 | max:  608.200 | avg:  539.450 |
+*/
