@@ -8,6 +8,12 @@ composability. Here're a couple of things to get you up to speed on using it:
 3. Reactivity (to be added)
 4. Composability (to be added)
 
+
+> **Warning**
+>
+> This is the early stages of a work in progress. Documentation will added as a
+> few implementation details of Strawberry are fixed.
+ 
 ## Installation
 
 There are a couple of ways you can setup Strawberry
