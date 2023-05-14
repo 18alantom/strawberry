@@ -360,8 +360,11 @@ function getParent(target: Reactive<object>) {
 /**
  * External API Code
  */
-type Config = { prefix?: string; handlers?: HandlerMap };
-export function init(config?: Config) {
+
+/**
+ * Initializes strawberry and returns the reactive data object.
+ */
+export function init(config?: { prefix?: string; handlers?: HandlerMap }) {
   globalData ??= reactive({}, '') as {} & Meta;
   globalPrefix = config?.prefix ?? globalPrefix;
 
@@ -373,9 +376,22 @@ export function init(config?: Config) {
   }
 
   register();
+  document.addEventListener('readystatechange', readyStateChangeHandler);
+
   return globalData;
 }
 
+function readyStateChangeHandler() {
+  console.log(document.readyState);
+  if (document.readyState === 'interactive') {
+    register();
+  }
+}
+
+/**
+ * Loads templates from external files. Relative paths
+ * should be provided for loading.
+ */
 export async function load(files: string | string[]) {
   if (typeof files === 'string') {
     files = [files];
@@ -395,27 +411,63 @@ export async function load(files: string | string[]) {
   }
 }
 
+/**
+ * Registers all templates found in the given elements subtree
+ * if no element is provided `document` is used.
+ */
 export function register(rootElement?: HTMLElement) {
   let root = rootElement ?? document;
   for (const template of root.getElementsByTagName('template')) {
-    const tagName = template.getAttribute('name');
-    if (!tagName || !!customElements.get(tagName)) {
-      return;
-    }
-
-    const elConstructor = class extends HTMLElement {
-      constructor() {
-        super();
-        const element = template.content.children[0]?.cloneNode(true);
-        if (element) {
-          this.attachShadow({ mode: 'open' }).appendChild(element);
-        }
-      }
-    };
-    customElements.define(tagName, elConstructor);
+    registerComponent(template);
   }
 }
 
+function registerComponent(template: HTMLTemplateElement) {
+  const name = template.getAttribute('name')?.toLowerCase();
+  if (!name || !!customElements.get(name)) {
+    return;
+  }
+
+  const constructor = class extends HTMLElement {
+    constructor() {
+      super();
+      const shadowRoot = this.attachShadow({ mode: 'open' });
+      for (const ch of template.content.children) {
+        if (!ch) {
+          continue;
+        }
+
+        shadowRoot.appendChild(ch.cloneNode(true));
+      }
+    }
+  };
+
+  customElements.define(name, constructor);
+}
+
+/**
+ * Sets watchers for a given key. Key is a dot separated string
+ * for a value in side the reactive data object.
+ *
+ * For example:
+ *
+ * ```javascript
+ * data = {
+ *   a: {
+ *     b: [
+ *       'value',
+ *     ]
+ *   }
+ * }
+ * ```
+ *
+ * For example to the key to watch changes to the string 'value'
+ * would be `a.b.0`.
+ *
+ * Watcher is a function that receives the newValue that is set.
+ * watchers should not alter the reactive data object. If a dependent
+ * value is required then a `computed` value should be used.
+ */
 export function watch(key: string, watcher: Watcher) {
   ReactivityHandler.watchers[key] ??= [];
   ReactivityHandler.watchers[key]!.push(watcher);
@@ -438,7 +490,6 @@ export function unwatch(key?: string, watcher?: Watcher) {
 
 /**
  * TODO:
- * - [ ] Don't use shadow dom for templates?
  * - [ ] Cache computed?
  * - [ ] Cache el references?
  * - [ ] Check array changes: shift, unshift, reverse
@@ -457,6 +508,89 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Notes
 
 TODO: Move these elsewhere maybe
+
+## HTMLTemplateElement based Components
+
+Components use the ShadowDOM, regular DOM based components are not used
+because:
+
+1. They don't work as expected.
+2. They don't provide encapsulation.
+
+### Registration
+
+Components are auto registered twice:
+1. Immediately when `sb.init` is called. This will register all the templates 
+   defined before the script tag containing `sb.init` but not after.
+2. After document has been loaded, i.e. when `readyState` changes to "interactive"
+   this will load all of the components definined in html file.
+     
+External components can be registered using `sb.load`, example:
+
+```javascript
+sb.load('templates.html');
+```
+
+or to load multiple templates:
+
+```javascript
+sb.load(['templates-one.html', 'templates-two.html]);
+```
+
+Externally definied components are loaded async, so if you want to run code after
+the external components have been definied you can run it in a module script tag.
+
+
+```html
+<script type="module">
+  await sb.load('templates.html');
+</script>
+```
+
+**Note**: script tags inside externally definied templates will not be executed.
+This is a security detail.
+
+### Styling
+
+Template based components grant encasulation on styling:
+```html 
+<template name="blue-h1">
+  <h1><slot /></h1>
+  <style>
+    h1 {
+      color: blue;
+    }
+  </style>
+</template>
+```
+
+In the above html, the style element is scoped only to the component `<blue-h1>`
+and this styling is not applied to other regular `<h1>` elements outside the
+template.
+
+### Script
+
+Scripts inside a template execute in the global context by default. 
+
+```html 
+<template name="blue-h1">
+  <h1 style="color: blue"><slot /></h1>
+  <script>
+    console.log('Hello, World!');
+  </script>
+</template>
+```
+
+Execution takes place when the component is being rendered. For example when
+the following HTML is encountered by the parser:
+  
+```html
+<blue-h1>Hello, World!</blue-h1>
+```
+ 
+The script is **not** executed whent the `<template>` HTML is parsed or
+when the component is registered.
+
 
 ## Performance Numbers
 

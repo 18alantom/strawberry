@@ -151,20 +151,14 @@ of the `li` are set from the list items.
   <p style="color: red"><slot /></p>
 </template>
 
-<script>
-  sb.register();
-</script>
-
 <red-p>Hi!</red-p>
 ```
-
-_Note: `sb.register` is not required if `sb.init` is called after template definition. Later versions might not require calling `sb.register`._
 
 **5. External Templates**: Templates can be defined in external files. They are loaded and registered using `sb.load`.
 
 ```html
-<script type="module">
-  await sb.load('./templates.html');
+<script>
+sb.load('./templates.html');
 </script>
 
 <red-p>Hi!</red-p>
