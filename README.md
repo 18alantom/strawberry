@@ -211,7 +211,7 @@ sb.load('./templates.html');
 These are excerpts from the CoRecursive podcast on [JSON vs XML](https://corecursive.com/json-vs-xml-douglas-crockford/).
 
 > It’s probably the JavaScript frameworks. They have gotten so big and so weird.
-> People seem to love them. I don’t understand why. And on web APIs.
+> People seem to love them. I don’t understand why.
 
 And on web APIs.
 
