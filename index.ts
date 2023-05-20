@@ -85,17 +85,6 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     return success;
   }
 
-  static updateDependencies(key: string) {
-    const dependents = Object.keys(this.dependents)
-      .filter((k) => k === key || key.startsWith(k + '.'))
-      .map((k) => this.dependents[k] ?? [])
-      .flat();
-
-    for (const dep of dependents) {
-      this.update(dep.computed, dep.key, false);
-    }
-  }
-
   static deleteProperty(
     target: Reactive<object>,
     prop: string | symbol
@@ -117,6 +106,17 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
 
     return success;
+  }
+
+  static updateDependencies(key: string) {
+    const dependents = Object.keys(this.dependents)
+      .filter((k) => k === key || key.startsWith(k + '.'))
+      .map((k) => this.dependents[k] ?? [])
+      .flat();
+
+    for (const dep of dependents) {
+      this.update(dep.computed, dep.key, false);
+    }
   }
 
   static syncTree(target: Reactive<any[]>, prop: string, value: any) {
@@ -375,16 +375,15 @@ export function init(config?: { prefix?: string; handlers?: HandlerMap }) {
     };
   }
 
-  register();
+  registerTemplates();
   document.addEventListener('readystatechange', readyStateChangeHandler);
 
   return globalData;
 }
 
 function readyStateChangeHandler() {
-  console.log(document.readyState);
   if (document.readyState === 'interactive') {
-    register();
+    registerTemplates();
   }
 }
 
@@ -398,7 +397,6 @@ export async function load(files: string | string[]) {
   }
 
   for (const file of files) {
-    const root = document.createElement('div');
     const html = await fetch(file)
       .then((r) => r.text())
       .catch((e) => console.error(e));
@@ -406,20 +404,91 @@ export async function load(files: string | string[]) {
       continue;
     }
 
-    root.innerHTML = html;
-    register(root);
+    register(html);
   }
 }
 
 /**
- * Registers all templates found in the given elements subtree
- * if no element is provided `document` is used.
+ * Registers templates. It can be used to register custom components during
+ * runtime, i.e. after DOM has loaded. Else `sb.init` and `sb.load` should be
+ * sufficient.
+ *
+ * `sb.load` calls this to register templates after fetching them. It can be used
+ * in few different ways.
+ *
+ * 1. Without any passing args.
+ *    ```javascript
+ *       sb.register();
+ *    ```
+ *    This will register all the elements in html document if they haven't been registered
+ *
+ * 2. Passing the root element that contains the templates
+ *    ```javascript
+ *       sb.register(rootElement);
+ *    ````
+ *    This will register all the templates found inside the root element.
+ *
+ * 3. Using it as a tag function:
+ *    ```javascript
+ *       sb.register`
+ *         <template name="colored-p">
+ *           <p style="font-family: sans-serif; color: ${color};">
+ *             <slot />
+ *           </p>
+ *         </template>`;
+ *    ```
+ *    This allows for dynamically creating templates with interpolated
+ *    values and expressions.
+ *
+ * 4. Passing it the template as a string. Functionally, it is the same
+ *    as using it as a tagged function
+ *    ```javascript
+ *       sb.register(`<template name="colored-p">
+ *           <p style="font-family: sans-serif; color: ${color};">
+ *             <slot />
+ *           </p>
+ *         </template>`);
+ *    ```
  */
-export function register(rootElement?: HTMLElement) {
+
+export function register(root: string[], ...args: unknown[]): void;
+export function register(root: HTMLElement): void;
+export function register(template: string): void;
+export function register(
+  root?: string | HTMLElement | string[],
+  ...args: unknown[]
+): void {
+  if (Array.isArray(root)) {
+    root = stitchTemplate(root, ...args);
+  }
+
+  if (typeof root === 'string') {
+    root = wrapInDiv(root);
+  }
+
+  registerTemplates(root);
+}
+
+function registerTemplates(rootElement?: HTMLElement) {
   let root = rootElement ?? document;
   for (const template of root.getElementsByTagName('template')) {
     registerComponent(template);
   }
+}
+
+function stitchTemplate(arr: string[], ...args: unknown[]): string {
+  let stitched: string = arr[0] ?? '';
+  for (let i = 1; i < arr.length; i++) {
+    stitched += args[i - 1];
+    stitched += arr[i];
+  }
+  return stitched;
+}
+
+function wrapInDiv(html: string): HTMLElement {
+  const root = document.createElement('div');
+  root.innerHTML = html;
+  return root;
 }
 
 function registerComponent(template: HTMLTemplateElement) {
@@ -500,14 +569,43 @@ export function unwatch(key?: string, watcher?: Watcher) {
  * - [ ] Review the code, take note of implementation and hacks
  * - [ ] Update Subtree after display
  * - [ ] Sync newly inserted nodes with other handlers
- * - [ ] Remove the need for `sb.register`
  * - [ ] Allow preset values to be loaded as el is inserted
+ * - [x] Remove the need for `sb.register`
+ * - [x] Update sb register so that this can be done:
+ *      ```
+ *       - [x] sb.register`<template name="new-p"><p><slot/></p></template>`;
+ *       - [x] sb.register(`<template name="new-p"><p><slot/></p></template>`);
+ *       - [x] sb.register('new-p', `<p><slot/></p>`);
+ *      ```
+ *
  */
 
 /**
+
+# Scratch Space
+
+Ideally one should be able to init strawberry in the head element
+set properties to `data.prop = value` in script tags in the 
+loading readyState
+
+and this all should be set using DOMContentLoaded.
+
 # Notes
 
 TODO: Move these elsewhere maybe
+
+## The Reactive Data Object
+
+The value received when `sb.init` is the reactive data object.
+
+```javascript
+const data = sb.init();
+```
+Think of this as an object that holds data that is meant to be
+rendered. You can set any kind of value to this object, but Strawberry
+listens to changes to only the following type of objects
+
+
 
 ## HTMLTemplateElement based Components
 
@@ -523,7 +621,7 @@ Components are auto registered twice:
 1. Immediately when `sb.init` is called. This will register all the templates 
    defined before the script tag containing `sb.init` but not after.
 2. After document has been loaded, i.e. when `readyState` changes to "interactive"
-   this will load all of the components definined in html file.
+   this will load all of the components defined in the html file.
      
 External components can be registered using `sb.load`, example:
 
