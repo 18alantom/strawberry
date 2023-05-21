@@ -7,11 +7,11 @@ function test(truthy, message) {
   if (truthy) {
     console.log(`🟢 ${idx} - ${message}`);
     success += 1;
-    update('success', success + failure);
+    update('success', success);
   } else {
     console.error(`🔴 ${idx} - ${message}`);
     failure += 1;
-    update('failure', success + failure);
+    update('failure', failure);
   }
 
   update('total', success + failure);

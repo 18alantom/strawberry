@@ -156,9 +156,8 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
    */
   static updateComputed(key: string) {
     const dependents = Object.keys(this.dependents)
-      .filter((k) => k === key || key.startsWith(k + '.'))
-      .map((k) => this.dependents[k] ?? [])
-      .flat();
+      .filter((k) => k === key || k.startsWith(key + '.'))
+      .flatMap((k) => this.dependents[k] ?? []);
 
     for (const dep of dependents) {
       this.update(dep.computed, dep.key, false, dep.parent, dep.prop);
@@ -217,11 +216,11 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   ) {
     const isArray = Array.isArray(parent);
     if (isArray && /\d+/.test(prop)) {
-      appendChildIfItemPushed(parent, prop, value);
+      appendChildNode(parent, prop, value);
     }
 
     if (isArray && prop === 'length') {
-      sortDOMListNodes(parent);
+      sortChildNodes(parent);
     }
 
     for (const attrSuffix in this.directives) {
@@ -307,7 +306,7 @@ function array(el: Element, value: unknown[], key: string) {
   el.replaceChildren(...children);
 }
 
-function appendChildIfItemPushed(
+function appendChildNode(
   target: Reactive<unknown[]>,
   prop: string,
   value: unknown
@@ -341,7 +340,7 @@ function appendChildIfItemPushed(
   }
 }
 
-function sortDOMListNodes(target: Reactive<unknown[]>) {
+function sortChildNodes(target: Reactive<unknown[]>) {
   /**
    * Called only when length prop of an array is set.
    *
