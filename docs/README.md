@@ -181,3 +181,13 @@ _Note: since `data.message` is a computed property, the following is true:_
 ```javascript
 typeof data.message === 'string';
 ```
+
+<!--
+TODO:
+- [ ] Add analogies, ways to do things in sb that's done elsewhere
+- [ ] Documentation
+    - [ ] All sb functions that have been exported (init, load, register, watch, unwatch).
+    - [ ] Setting of custom directives using handlers.
+    - [ ] Overriding `sb-` prefix
+    - [ ] How to write apps using sb
+ ->

@@ -158,7 +158,7 @@ of the `li` are set from the list items.
 
 ```html
 <script>
-sb.load('./templates.html');
+  sb.load('./templates.html');
 </script>
 
 <red-p>Hi!</red-p>
@@ -204,8 +204,6 @@ sb.load('./templates.html');
 
 ---
 
-
-
 ## Douglas Crockford on the XML of today
 
 These are excerpts from the CoRecursive podcast on [JSON vs XML](https://corecursive.com/json-vs-xml-douglas-crockford/).
@@ -220,9 +218,3 @@ And on web APIs.
 > stupid, but it works and it’s reliable.
 
 Read the transcript on [CoRecursive](https://corecursive.com/json-vs-xml-douglas-crockford/#javascript-frameworks).
-
-<!--
-TODO:
-- [ ] Add analogies, ways to do things in sb that's done elsewhere
-- [ ] Add more documentation
- ->
