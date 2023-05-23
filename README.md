@@ -172,7 +172,7 @@ of the `li` are set from the list items.
   <h1 style="color: blue"><slot></slot></h1>
 </template>
 
-<!-- Red H1 Template -->
+<!-- Red P Template -->
 <template name="red-p">
   <p style="color: red"><slot></slot></p>
 </template>
