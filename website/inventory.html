@@ -230,7 +230,7 @@
     const item = document.getElementById('move-item')?.value;
     const qty = Number(document.getElementById('move-qty')?.value);
 
-    if (typeof item === 'string' && item && !Number.isNaN(qty)) {
+    if (typeof item === 'string' && item && !Number.isNaN(qty) && Number.isFinite(qty)) {
       move(item, qty);
     }
   });
