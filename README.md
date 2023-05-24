@@ -4,7 +4,7 @@
 
 Zero-dependency, build-free framework for the artisanal web.
 
-[Website](https://18alan.space/strawberry) · [How it works](https://18alan.space/posts/how-hard-is-it-to-build-a-frontend-framework.html) · [Docs](https://github.com/18alantom/strawberry/tree/main/docs)
+[Website](https://strawberry.quest) · [How it works](https://18alan.space/posts/how-hard-is-it-to-build-a-frontend-framework.html) · [Docs](https://github.com/18alantom/strawberry/tree/main/docs)
 
 </div>
 
@@ -44,7 +44,7 @@ spangly frameworks can do.
 </script>
 ```
 
-[Here's](https://18alan.space/strawberry/#inventory-example) a live example from
+[Here's](https://strawberry.quest/#inventory-example) a live example from
 the website.
 
 ---
