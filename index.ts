@@ -156,7 +156,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
    */
   static updateComputed(key: string) {
     const dependents = Object.keys(this.dependents)
-      .filter((k) => k === key || k.startsWith(key + '.'))
+      .filter((k) => k === key || k.startsWith(key + '.') || key.startsWith(k + '.'))
       .flatMap((k) => this.dependents[k] ?? []);
 
     for (const dep of dependents) {

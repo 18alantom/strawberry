@@ -341,6 +341,30 @@
       );
       delete data.users;
     </script>
+
+    <template name="inv-item">
+      <slot name="name" />
+    </template>
+    <script>
+      sb.register();
+    </script>
+    <div id="inv-items" sb-mark="items" sb-child="inv-item"></div>
+    <script>
+      const items = document.getElementById('inv-items');
+      data.qtys = {};
+      data.items = () =>
+        Object.keys(data.qtys).map((name) => ({
+          name,
+          quantity: data.qtys[name],
+        }));
+
+      test(items.children.length === 0, 'el#inv-items has no children');
+      data.qtys['item'] = 0;
+      test(items.children.length === 1, 'el#inv-items has 1 child');
+      test(items.children[0].innerText === 'item', 'el#inv-items has correct innertext');
+      delete data.items;
+      delete data.qtys;
+    </script>
   </body>
   <!-- 
     TODO: Tests
