@@ -142,6 +142,14 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
       const sidx = dep.indexOf('.') + 1;
       const dkey = dep.slice(sidx);
+      let root = dkey;
+      if (root.includes('.')) {
+        root = root.slice(0, root.indexOf('.'));
+      }
+
+      if (!globalData?.hasOwnProperty(root)) {
+        continue;
+      }
 
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value, parent, prop });
@@ -156,7 +164,9 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
    */
   static updateComputed(key: string) {
     const dependents = Object.keys(this.dependents)
-      .filter((k) => k === key || k.startsWith(key + '.') || key.startsWith(k + '.'))
+      .filter(
+        (k) => k === key || k.startsWith(key + '.') || key.startsWith(k + '.')
+      )
       .flatMap((k) => this.dependents[k] ?? []);
 
     for (const dep of dependents) {
@@ -255,6 +265,9 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     },
   };
 }
+
+// @ts-ignore
+window.rh = ReactivityHandler;
 
 function mark(el: Element, value: unknown, key: string, isDelete: boolean) {
   if (isDelete) {
@@ -737,7 +750,25 @@ Think of this as an object that holds data that is meant to be
 rendered. You can set any kind of value to this object, but Strawberry
 listens to changes to only the following type of objects
 
+## Handling of Computed
 
+Dependencies of a computed function are checked by converting the
+function into a string and searching for '.' or '?.' separated values.
+
+A variable in computed is considered as a dependency only if it has been
+defined before setting the computed.
+
+This is incorrect:
+```javascript
+data.b = () => data.a + 10;
+data.a = 10;
+```
+
+This is correct:
+```javascript
+data.a = 10;
+data.b = () => data.a + 10;
+```
 
 ## HTMLTemplateElement based Components
 
