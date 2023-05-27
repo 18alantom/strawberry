@@ -54,6 +54,7 @@ the website.
 **Index**
 
 [Installation](#installation) · [Features](#features) · [Examples](#examples) · [Development](#development)
+
 [Docs](https://github.com/18alantom/strawberry/tree/main/docs) · [Roadmap](https://github.com/18alantom/strawberry/blob/main/ROADMAP.md)
 
 </div>
