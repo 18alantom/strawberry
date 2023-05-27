@@ -14,26 +14,16 @@ cost of not being able to do _everything_.
 - Reactive Data Object (RDO): the object received when `sb.init` is called, when
   props of this object are updated, the UI updates.
 
-# Defer UI updates
+**List**
 
-**Problem** is that currently when an RDO prop is set in a regular `script` tag
-
-```html
-<script>
-  const data = sb.init();
-  data.prop = 'value';
-</script>
-```
-
-only the elements before the script with the apt `sb-mark` are updated.
-Downstream elements are not updated.
-
-**Desired behavior** is that all elements are updated. Irrespective of the
-where the script is loaded.
-
-A **solution** is that when RDO props are set inside the `head` tag, the updates
-are deferred until the ready state changes to `"interactive"`. This happens only
-after the DOM has been parsed but before all assets have been fetched.
+- [ ] [Nested Components](#nested-components)
+- [ ] [Setting `sb-*` props for Strawberry inserted elements](#setting-sb--props-for-strawberry-inserted-elements)
+- [ ] [Two-way Binding](#two-way-binding)
+- [ ] [Directives for Strawberry Created Elements](#directives-for-strawberry-created-elements)
+- [ ] [Logic Encapsulation in Templates](#logic-encapsulation-in-templates)
+- [ ] [Interactive Elements in Templates](#interactive-elements-in-templates)
+- [ ] [Animating `sb-if`](#animating-sb-if)
+- [x] [Defer Directives](#done-defer-ui-updates)
 
 # Nested Components
 
@@ -155,7 +145,7 @@ value when the RDO prop changes, or vice versa.
 1. Should this be in strawberry?
 2. Should this be incorporated into `sb-mark` when element is an input element?
 
-# Directives for Element Created
+# Directives for Strawberry Created Elements
 
 **Problem** is when an element is created and inserted by strawberry, there is
 no way to init the properties of that element.
@@ -178,3 +168,24 @@ buttons, etc. But accessing these elements requires traversing the Shadow DOM.
 
 **Problem** is that when `sb-if` causes a elements to be removed it's done using
 `el.replaceWith` which is not animatable.
+
+# `[DONE]` Defer UI updates
+
+**Problem** is that currently when an RDO prop is set in a regular `script` tag
+
+```html
+<script>
+  const data = sb.init();
+  data.prop = 'value';
+</script>
+```
+
+only the elements before the script with the apt `sb-mark` are updated.
+Downstream elements are not updated.
+
+**Desired behavior** is that all elements are updated. Irrespective of the
+where the script is loaded.
+
+A **solution** is that when RDO props are set inside the `head` tag, the updates
+are deferred until the ready state changes to `"interactive"`. This happens only
+after the DOM has been parsed but before all assets have been fetched.

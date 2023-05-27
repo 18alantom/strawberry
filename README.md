@@ -53,7 +53,8 @@ the website.
 
 **Index**
 
-[Installation](#installation) · [Features](#features) · [Examples](#examples)
+[Installation](#installation) · [Features](#features) · [Examples](#examples) · [Development](#development)
+[Docs](https://github.com/18alantom/strawberry/tree/main/docs) · [Roadmap](https://github.com/18alantom/strawberry/blob/main/ROADMAP.md)
 
 </div>
 
@@ -79,7 +80,7 @@ Here're are a few of its features:
 2. **Composability**: create and use components.
 3. **Build-free**: doesn't require a build-step. Link or [copy the lib](https://unpkg.com/sberry@0.0.0-alpha.1/dist/sb.min.js) and you're ready to go.
 4. **Zero Dependencies**: has no dependencies. Uses WebAPIs for everything.
-5. **Tiny**: [source code](https://github.com/18alantom/strawberry/blob/main/index.ts) is under LOC.
+5. **Tiny**: [source code](https://github.com/18alantom/strawberry/blob/main/index.ts) is under 1000 CLOC.
 6. **No VDOM**: directly updates the DOM.
 
 Strawberry is and will be developed with these two hard constraints:
@@ -201,6 +202,48 @@ of the `li` are set from the list items.
   data.user = { name: 'Lin', age: 36 };
 </script>
 ```
+
+---
+
+## Development
+
+The development of Strawberry does has a direction, but no deadlines as I work
+on this usually during the weekends.
+
+Here's a
+[road map](https://github.com/18alantom/strawberry/blob/main/ROADMAP.md). This
+isn't exactly a road map, but a list of problems and maybe their solutions that
+need to be implemented to further Strawberry.
+
+### Running Dev Mode
+
+Strawberry has only two dev dependencies: `esbuild` and `typescript`. Other than
+that the [Live Preview](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server)
+VSCode plugin is used to serve the HTML files for dev.
+
+To run Strawberry in dev mode:
+
+```bash
+# Clone the repo
+git clone https://github.com/18alantom/strawberry
+
+# Install esbuild and typescript
+yarn install
+
+# Run in Dev mode
+yarn dev
+```
+
+You can now create an HTML file in the repository and add `script:src` to link
+the generated `index.js` file. You can serve this using the Live Preview plugin.
+
+### Tests
+
+Right now tests just involve linking strawberry to an html file (`test.*.html`),
+and calling the `test` function to check whether a value is as expected. Success
+and Failures are printed in the console.
+
+See [`test.html`](https://github.com/18alantom/strawberry/blob/main/tests/test.html) for an example.
 
 ---
 
