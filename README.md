@@ -228,6 +228,7 @@ To run Strawberry in dev mode:
 git clone https://github.com/18alantom/strawberry
 
 # Install esbuild and typescript
+cd strawberry
 yarn install
 
 # Run in Dev mode
