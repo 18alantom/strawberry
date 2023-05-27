@@ -15,6 +15,8 @@ type BasicAttrs = 'mark' | 'child' | 'if' | 'plc';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
+let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
+  null;
 let globalData: null | Reactive<{}> = null;
 let globalPrefix = 'sb-';
 
@@ -224,6 +226,11 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     parent: Reactive<object>,
     prop: string
   ) {
+    if (globalDefer) {
+      globalDefer.push([value, key, isDelete, parent, prop]);
+      return;
+    }
+
     const isArray = Array.isArray(parent);
     if (isArray && /\d+/.test(prop)) {
       appendChildNode(parent, prop, value);
@@ -482,6 +489,14 @@ export function init(config?: { prefix?: string; directives?: DirectiveMap }) {
   globalData ??= reactive({}, '') as {} & Meta;
   globalPrefix = config?.prefix ?? globalPrefix;
 
+  if (
+    document.currentScript?.parentElement instanceof HTMLHeadElement &&
+    document.readyState === 'loading' &&
+    globalDefer === null
+  ) {
+    globalDefer = [];
+  }
+
   if (config?.directives) {
     ReactivityHandler.directives = {
       ...ReactivityHandler.directives,
@@ -491,6 +506,7 @@ export function init(config?: { prefix?: string; directives?: DirectiveMap }) {
 
   registerTemplates();
   document.addEventListener('readystatechange', readyStateChangeHandler);
+  document.addEventListener('DOMContentLoaded', executeDefered);
 
   return globalData;
 }
@@ -499,6 +515,12 @@ function readyStateChangeHandler() {
   if (document.readyState === 'interactive') {
     registerTemplates();
   }
+}
+
+export function executeDefered() {
+  const deferQueue = globalDefer ?? [];
+  globalDefer = null; // Needs to be set before calling directives else recursion
+  deferQueue.forEach((params) => ReactivityHandler.callDirectives(...params));
 }
 
 /**
@@ -714,6 +736,8 @@ to interactive
 
 And this all should be set using DOMContentLoaded.
   
+
+  
 How to Handle Nested Lists or Nested Objects?
 
 One solution is, instead of mentioning sb-child for the child, such as this:
@@ -738,6 +762,31 @@ Maybe add an sb-child to explicitly mark the the element as a child.
 # Notes
 
 TODO: Move these elsewhere maybe
+
+## UI Update Defer
+
+If `sb.init` is called inside the head element. Then all directive execution
+is deferred, i.e. all UI updates such as when an RDO prop is set and the appropriate
+UI is updated is deferred.
+  
+These are then executed when the DOM content loads, i.e. on DOMContentLoaded.
+
+```html
+<!-- This P will be set. -->
+<p sb-mark="message"></p>
+<script>
+  data.message = "Hello, World!"
+</script>
+
+
+<!-- This P will be set only if `sb.init` is called inside head. -->
+<p sb-mark="message"></p>
+```
+
+If the `sb.init` is not placed in the head tag then all directives are executed
+immediately. In such a case it is better to place the setting of the RDO values after
+the `body` tag so that the appropriate elements are found.
+
 
 ## The Reactive Data Object
 
