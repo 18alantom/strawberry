@@ -11,6 +11,7 @@ type Directive = (
   prop: string // property of the parent which points to the value, `parent[prop] ≈ value`
 ) => unknown;
 type DirectiveMap = Record<string, Directive>;
+type Placeholder = { key: string; el: Element; prev?: null | Element };
 type BasicAttrs = 'mark' | 'child' | 'if' | 'plc';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
@@ -19,6 +20,7 @@ let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
   null;
 let globalData: null | Reactive<{}> = null;
 let globalPrefix = 'sb-';
+const globalPlaceholderMap = new Map<Element, Placeholder[]>();
 
 const attr = (k: BasicAttrs) => globalPrefix + k;
 
@@ -277,9 +279,9 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 window.rh = ReactivityHandler;
 
 function appendChildNode(
-  target: Reactive<unknown[]>,
-  prop: string,
-  value: unknown
+  target: Reactive<unknown[]>, // The array
+  prop: string, // Index of the pushed element
+  value: unknown // Value that was pushed
 ) {
   /**
    * Called only when an array element is updated,
@@ -290,23 +292,21 @@ function appendChildNode(
    *
    * This function appends a child for the pushed item.
    */
-  const prefix = target.__sb_prefix;
-  const els = document.querySelectorAll(`[${attr('mark')}="${prefix}"]`);
+  const parentKey = target.__sb_prefix;
+  const roots = document.querySelectorAll(`[${attr('mark')}="${parentKey}"]`);
 
-  const key = getKey(prop, prefix);
-  for (const el of els) {
-    const ch = el.querySelector(`[${attr('mark')}="${key}"]`);
+  const childPrefix = getKey(prop, parentKey);
+  for (const root of roots) {
+    const ch = root.querySelector(`[${attr('mark')}="${childPrefix}"]`);
     if (ch !== null) {
       continue;
     }
 
-    const childTag = el.getAttribute(attr('child'));
-    if (!childTag) {
+    const child = getArrayChild(root, childPrefix, value);
+    if (child === null) {
       continue;
     }
-
-    const child = getChild(childTag, key, value);
-    el.appendChild(child);
+    root.appendChild(child);
   }
 }
 
@@ -365,22 +365,20 @@ function mark(el: Element, value: unknown, key: string, isDelete: boolean) {
 function remove(el: Element) {
   const isPlc = el.getAttribute(attr('plc')) === '1';
   const parent = el.parentElement;
+
+  globalPlaceholderMap.delete(el);
   if (!isPlc || !(el instanceof HTMLElement) || !parent) {
     return el.remove();
   }
 
   if (el.getAttribute(attr('mark')) === parent.getAttribute(attr('mark'))) {
+    globalPlaceholderMap.delete(parent);
     return parent.remove();
   }
 
   el.remove();
 }
 
-/**
- * Needs to be updated when an element is removed.
- */
-type Placeholder = { key: string; el: Element };
-const globalPlaceholderMap = new Map<Element, Placeholder[]>();
 function setChildren(root: Element, prefix: string, value: unknown) {
   /**
    * Alternative getChild implementation for the placeholder syntax
@@ -411,47 +409,14 @@ function setChildren(root: Element, prefix: string, value: unknown) {
    * being stored is an array then the key is '#', else it is the object
    * property name.
    */
-  const placeholders: Placeholder[] = globalPlaceholderMap.get(root) ?? [];
-  if (!globalPlaceholderMap.has(root)) {
-    for (const el of [...root.children]) {
-      /**
-       * Examples:
-       * $. pkey       key   desc
-       * 1. list.#     #     root has sb-mark="list"
-       * 2. user.name  name  root has sb-mark="user"
-       *
-       * pkey can be short or full:
-       * - Full:  users > users.# > users.#.name
-       * - Short: users >       # >         name
-       *
-       * prefix is implicit from the markup
-       */
-      const pkey = el.getAttribute(attr('mark')) ?? '';
-      const isFullFkey = pkey.startsWith(prefix.replace(/\d+/g, '#'));
-      const isShortFkey =
-        (isArray && pkey === '#') || (isObject && pkey in value);
-
-      if (!isFullFkey && !isShortFkey) {
-        continue;
-      }
-
-      let key = pkey;
-      if (isFullFkey) {
-        key = pkey.slice(prefix.length + 1);
-      }
-
-      placeholders.push({ key, el });
-      el.remove();
-    }
-
-    globalPlaceholderMap.set(root, placeholders);
-  }
+  const placeholders = getPlaceholdersFromRoot(root, prefix, value);
 
   /**
    * Calls setChildren recursively to build the root elements
    * child tree. Leaf nodes just have their innerText set.
    */
-  for (const { key, el: childRootPlaceholder } of placeholders) {
+  for (const placeholder of placeholders) {
+    const { key, el: childRootPlaceholder } = placeholder;
     const isLoop = key === '#';
 
     /**
@@ -503,6 +468,118 @@ function setChildren(root: Element, prefix: string, value: unknown) {
       root.appendChild(childRoot);
     }
   }
+}
+
+function getPlaceholdersFromRoot(
+  root: Element,
+  prefix: string,
+  value: unknown
+): Placeholder[] {
+  const placeholders: Placeholder[] = globalPlaceholderMap.get(root) ?? [];
+  if (globalPlaceholderMap.has(root)) {
+    return placeholders;
+  }
+
+  const isArray = Array.isArray(value);
+  const isObject = typeof value === 'object' && value !== null;
+
+  const marked = root.querySelectorAll(`[${attr('mark')}]`);
+  if (!marked) {
+    return placeholders;
+  }
+
+  for (const el of marked) {
+    if (!isFirstMarkedChild(el, root)) {
+      continue;
+    }
+
+    /**
+     * Examples:
+     * $. pkey       key   desc
+     * 1. list.#     #     root has sb-mark="list"
+     * 2. user.name  name  root has sb-mark="user"
+     *
+     * pkey can be short or full:
+     * - Full:  users > users.# > users.#.name
+     * - Short: users >       # >         name
+     *
+     * prefix is implicit from the markup
+     */
+
+    const pkey = el.getAttribute(attr('mark')) ?? '';
+    const isFullPkey = pkey.startsWith(prefix.replace(/\d+/g, '#'));
+    const isShortPkey =
+      (isArray && pkey === '#') || (isObject && pkey in value);
+
+    if (!isFullPkey && !isShortPkey) {
+      continue;
+    }
+
+    let key = pkey;
+    if (isFullPkey) {
+      key = pkey.slice(prefix.length + 1);
+    }
+
+    const placeholder: Placeholder = { key, el };
+    /**
+     * this will remove firstmarkedchild by not immediate child elements too
+     * this causes displacement of the element. nested elements will then be pushed
+     * which breaks the flow
+     *
+     * the ideal solution to this maintains a reference to the parent, anyway to reuse
+     * the placeholders without having to remove them
+     *
+     * 💡 IDEA
+     * - remove only loop placeholders.
+     * - maintain a marker that says where a loop item element has to be appended after.
+     * - if no marker then it's appended to the root.
+     *
+     * Only array placeholders are removed as these are variable, i.e. depending
+     * on the length of the array, `n` number of placeholders are appended.
+     *
+     * For non array placeholders, the location of the place holder is static and
+     * the key used in `sb-mark` is might be an actual key.
+     */
+
+    if (key === '#') {
+      placeholder.prev = el.previousElementSibling;
+      el.remove();
+    }
+
+    placeholders.push(placeholder);
+  }
+
+  globalPlaceholderMap.set(root, placeholders);
+  return placeholders;
+}
+
+/**
+ * Traverses up the tree to check if `child` is the first marked element
+ * of `root`.
+ */
+function isFirstMarkedChild(child: Element, root: Element): boolean {
+  const parent = child.parentElement;
+  if (!parent?.hasAttribute(attr('mark')) && parent) {
+    return isFirstMarkedChild(parent, root);
+  }
+
+  return parent === root;
+}
+
+function getArrayChild(root: Element, childKey: string, childValue: unknown) {
+  const placeholders = globalPlaceholderMap.get(root);
+  const placeholder = placeholders?.find((p) => p.key === '#');
+  if (!placeholder) {
+    return null;
+  }
+
+  const childRoot = placeholder.el.cloneNode(true);
+  if (!(childRoot instanceof Element)) {
+    return null;
+  }
+
+  setChildren(childRoot, childKey, childValue);
+  return childRoot;
 }
 
 function text(el: Element, value: unknown, key: string) {
@@ -831,7 +908,12 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [ ] Buffer updates during load
+- [ ] Looping
+  - [ ] Refactor DRY parts in setChildren and getArrayChild
+  - [ ] Handle when immediate child is not sb-marked
+  - [x] Handle append child
+  - [x] Delete items from placeholder map when removed
+  - [ ] Handle slotted templates
 - [?] Change use of Records to Map (execution order of watchers, directives, computed)
 - [ ] Cache computed?
 - [ ] Check array changes: shift, unshift, reverse
@@ -843,6 +925,7 @@ TODO:
 - [ ] Sync newly inserted nodes with other directives
 - [ ] Review the code, take note of implementation and hacks
 - [^] Cache el references? (might not be required, 10ms for 1_000_000 divs querySelectorAll)
+- [x] Buffer updates during load
 - [x] Remove the need for `sb.register`
 - [x] Update sb register so that this can be done:
      ```
