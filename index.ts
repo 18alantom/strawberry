@@ -276,56 +276,6 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 // @ts-ignore
 window.rh = ReactivityHandler;
 
-function mark(el: Element, value: unknown, key: string, isDelete: boolean) {
-  if (isDelete) {
-    remove(el);
-  }
-
-  if (Array.isArray(value)) {
-    return array(el, value, key);
-  } else if (typeof value === 'object' && value !== null) {
-    return object(el, value, key);
-  }
-
-  return text(el, value, key);
-}
-
-function remove(el: Element) {
-  const isPlc = el.getAttribute(attr('plc')) === '1';
-  const parent = el.parentElement;
-  if (!isPlc || !(el instanceof HTMLElement) || !parent) {
-    return el.remove();
-  }
-
-  if (el.getAttribute(attr('mark')) === parent.getAttribute(attr('mark'))) {
-    return parent.remove();
-  }
-
-  el.remove();
-}
-
-function text(el: Element, value: unknown, key: string) {
-  if (el instanceof HTMLElement && value !== undefined) {
-    el.innerText = `${value}`;
-  }
-  el.setAttribute(attr('mark'), key);
-}
-
-function array(el: Element, value: unknown[], key: string) {
-  const childTag = el.getAttribute(attr('child'));
-  if (!childTag) {
-    console.warn('marked el with array value has no child', value, el, key);
-    return;
-  }
-
-  const children = value.map((item, i) =>
-    getChild(childTag, getKey(String(i), key), item)
-  );
-
-  el.setAttribute(attr('mark'), key);
-  el.replaceChildren(...children);
-}
-
 function appendChildNode(
   target: Reactive<unknown[]>,
   prop: string,
@@ -393,6 +343,189 @@ function sortChildNodes(target: Reactive<unknown[]>) {
       })
       .forEach((ch) => el.appendChild(ch));
   }
+}
+
+function mark(el: Element, value: unknown, key: string, isDelete: boolean) {
+  if (isDelete) {
+    remove(el);
+  }
+
+  /*
+  if (Array.isArray(value)) {
+    return array(el, value, key);
+  } else if (typeof value === 'object' && value !== null) {
+    return object(el, value, key);
+  }
+
+  return text(el, value, key);
+  */
+  setChildren(el, key, value);
+}
+
+function remove(el: Element) {
+  const isPlc = el.getAttribute(attr('plc')) === '1';
+  const parent = el.parentElement;
+  if (!isPlc || !(el instanceof HTMLElement) || !parent) {
+    return el.remove();
+  }
+
+  if (el.getAttribute(attr('mark')) === parent.getAttribute(attr('mark'))) {
+    return parent.remove();
+  }
+
+  el.remove();
+}
+
+/**
+ * Needs to be updated when an element is removed.
+ */
+type Placeholder = { key: string; el: Element };
+const globalPlaceholderMap = new Map<Element, Placeholder[]>();
+function setChildren(root: Element, prefix: string, value: unknown) {
+  /**
+   * Alternative getChild implementation for the placeholder syntax
+   * to define chilren elements of a marked element.
+   */
+  const isArray = Array.isArray(value);
+  const isObject = typeof value === 'object' && value !== null;
+
+  /**
+   * If the value is neither an Array or an Object then just
+   * set the inner text and return.
+   */
+  if (root instanceof HTMLElement && !isArray && !isObject) {
+    root.innerText = String(value ?? '');
+  }
+
+  if (!isArray && !isObject) {
+    return;
+  }
+
+  /**
+   * Updates `globalTemplateMap`.
+   *
+   * This object keeps a map from an element and the children element
+   * templates it should use.
+   *
+   * Each element template element has an associated key, if the value
+   * being stored is an array then the key is '#', else it is the object
+   * property name.
+   */
+  const placeholders: Placeholder[] = globalPlaceholderMap.get(root) ?? [];
+  if (!globalPlaceholderMap.has(root)) {
+    for (const el of [...root.children]) {
+      /**
+       * Examples:
+       * $. pkey       key   desc
+       * 1. list.#     #     root has sb-mark="list"
+       * 2. user.name  name  root has sb-mark="user"
+       *
+       * pkey can be short or full:
+       * - Full:  users > users.# > users.#.name
+       * - Short: users >       # >         name
+       *
+       * prefix is implicit from the markup
+       */
+      const pkey = el.getAttribute(attr('mark')) ?? '';
+      const isFullFkey = pkey.startsWith(prefix.replace(/\d+/g, '#'));
+      const isShortFkey =
+        (isArray && pkey === '#') || (isObject && pkey in value);
+
+      if (!isFullFkey && !isShortFkey) {
+        continue;
+      }
+
+      let key = pkey;
+      if (isFullFkey) {
+        key = pkey.slice(prefix.length + 1);
+      }
+
+      placeholders.push({ key, el });
+      el.remove();
+    }
+
+    globalPlaceholderMap.set(root, placeholders);
+  }
+
+  /**
+   * Calls setChildren recursively to build the root elements
+   * child tree. Leaf nodes just have their innerText set.
+   */
+  for (const { key, el: childRootPlaceholder } of placeholders) {
+    const isLoop = key === '#';
+
+    /**
+     * Handling Objects:
+     * If not loop key can be props of a regular object
+     * or array props like 'length'.
+     */
+    if (!isLoop) {
+      const childRoot = childRootPlaceholder.cloneNode(true);
+      if (!(childRoot instanceof Element)) {
+        return;
+      }
+
+      const childValue = (value as Record<string, unknown>)[key];
+      const childPrefix = getKey(key, prefix);
+
+      childRoot.setAttribute(attr('mark'), childPrefix);
+      setChildren(childRoot, childPrefix, childValue);
+
+      root.appendChild(childRoot);
+      continue;
+    }
+
+    /**
+     * If isLoop and !isArray then incorrect usage of '#'
+     */
+    if (!isArray) {
+      console.warn('placeholder key "#" found for non Array value: ', value);
+      continue;
+    }
+
+    /**
+     * Handling Arrays:
+     * If isLoop and isArray then loop over array and append
+     * the children.
+     */
+    for (const idx in value) {
+      const childRoot = childRootPlaceholder.cloneNode(true);
+      if (!(childRoot instanceof Element)) {
+        return;
+      }
+
+      const childValue = value[idx];
+      const childPrefix = getKey(idx, prefix);
+
+      childRoot.setAttribute(attr('mark'), childPrefix);
+      setChildren(childRoot, childPrefix, childValue);
+
+      root.appendChild(childRoot);
+    }
+  }
+}
+
+function text(el: Element, value: unknown, key: string) {
+  if (el instanceof HTMLElement && value !== undefined) {
+    el.innerText = String(value);
+  }
+
+  el.setAttribute(attr('mark'), key);
+}
+
+function array(el: Element, value: unknown[], key: string) {
+  const childTag = el.getAttribute(attr('child'));
+  if (!childTag) {
+    console.warn('marked el with array value has no child', value, el, key);
+    return;
+  }
+
+  const children = value.map((item, i) =>
+    getChild(childTag, getKey(String(i), key), item)
+  );
+
+  el.setAttribute(attr('mark'), key);
+  el.replaceChildren(...children);
 }
 
 function object(el: Element, value: object, key: string) {
@@ -718,26 +851,7 @@ TODO:
       - [x] sb.register('new-p', `<p><slot/></p>`);
      ```
 
-Priority
-- [x] Sync Tree
-- [ ] Buffer DOM Updates when loading using a Defer Queue.
-- [ ] Nested lists.
-- [ ] Check Speed:
-  - [ ] Cache Computed values until dependencies update.
-  - [ ] Cache Element refereneces.
 
-Ideally one should be able to init strawberry in the head element
-set properties to `data.prop = value` in script tags in the 
-loading readyState
-
-For DOMUpdates if readyState is loading then updates to the dom
-can be pushed to the defer queue and then flushed when ready state changes
-to interactive
-
-And this all should be set using DOMContentLoaded.
-  
-
-  
 How to Handle Nested Lists or Nested Objects?
 
 One solution is, instead of mentioning sb-child for the child, such as this:
@@ -759,9 +873,56 @@ Maybe add an sb-child to explicitly mark the the element as a child.
   </div>
 ``` 
 
+Another solution is to complete get rid of `sb-child` and use `sb-mark`
+with `#` to indicate that the element belongs to a child.
+  
+Example with lists:
+  
+```html
+<div sb-mark="list">
+  <plum-p sb-mark="list.#"></plum-p>
+</div>
+```
+
+example with objects:
+
+```html
+<div sb-mark="user">
+  <h1 sb-mark="user.name"></h1>
+  <p sb-mark="user.email"></p>
+</div>
+
+<!-- list of objects -->
+<div sb-mark="users">
+  <div sb-mark="users.#">
+    <h1 sb-mark="users.#.name"></h1>
+    <p sb-mark="users.#.email"></p>
+  </div>
+</div>
+
+<!-- or -->
+<div sb-mark="users">
+  <div sb-mark="#">
+    <h1 sb-mark="name"></h1>
+    <p sb-mark="email"></p>
+  </div>
+</div>
+```
+
+`sb-child` can still be used, but if `sb-child` is not mentioned then
+the list or object mapped UI elements inner child is fetched. And a
+reference to them is stored on the basis of name.
+
+type TemplateMap = Map<HTMLElement, Record<key, Element>>
+
 # Notes
 
 TODO: Move these elsewhere maybe
+
+## Nesting and Looping
+
+When nesting, the key used should be `in` the object. With the exception of `'#'` 
+which is used for looping
 
 ## UI Update Defer
 
