@@ -306,7 +306,7 @@ function remove(el: Element) {
 
 function text(el: Element, value: unknown, key: string) {
   if (el instanceof HTMLElement && value !== undefined) {
-    el.innerText = String(value);
+    el.innerText = `${value}`;
   }
   el.setAttribute(attr('mark'), key);
 }
@@ -386,8 +386,8 @@ function sortChildNodes(target: Reactive<unknown[]>) {
         const ams = am.split('.');
         const bms = bm.split('.');
 
-        const amIdx = Number(ams[ams.length - 1] ?? 0);
-        const bmIdx = Number(bms[bms.length - 1] ?? 0);
+        const amIdx = +(ams[ams.length - 1] ?? 0);
+        const bmIdx = +(bms[bms.length - 1] ?? 0);
 
         return amIdx - bmIdx;
       })
@@ -614,7 +614,7 @@ function registerTemplates(rootElement?: HTMLElement) {
 
 function stitchTemplate(arr: string[], ...args: unknown[]): string {
   let stitched: string = arr[0] ?? '';
-  for (let i = 1; i < arr.length; i++) {
+  for (let i = 1, length = arr.length; i < length; i++) {
     stitched += args[i - 1];
     stitched += arr[i];
   }
