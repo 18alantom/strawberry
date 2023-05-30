@@ -8,7 +8,7 @@ type Directive = (
   key: string, // Period '.' delimited key that points to the value in the global data object.
   isDelete: boolean, // Whether the value was deleted `delete data.prop`.
   parent: Reactive<object>, // The parent object to which the value belongs (actual object not its proxy).
-  prop: string // property of the parent which points to the value, `parent[prop] ≈ value`
+  prop: string // Property of the parent which points to the value, `parent[prop] ≈ value`
 ) => unknown;
 type DirectiveMap = Record<string, Directive>;
 type BasicAttrs = 'mark' | 'child' | 'if' | 'plc';
@@ -401,32 +401,48 @@ function initializeArray(
   root: Element,
   placeholderKey: string,
   value: unknown[]
-) {
-  // TODO: delete preexisting list items
+): void {
+  /**
+   * When a new list is set previous list item elements should be
+   * deleted. Empty list deletes all items, but keeps the placeholder.
+   *
+   * When a list is updated a child element is prepended before the
+   * placeholder element.
+   */
+  let prev = root.previousElementSibling;
+  while (prev) {
+    const curr = prev as Element | null; // TS doesn't check this correctly
+    prev = curr?.previousElementSibling ?? null;
+
+    const key = curr?.getAttribute(attr('mark'));
+    if (!key) {
+      continue;
+    }
+
+    if (key.replace(/\d+$/, '#') === placeholderKey) {
+      curr?.remove();
+    } else {
+      break;
+    }
+  }
 
   /**
-   * Array placeholders can be inside templates, i.e. if
-   * they are not to be rendered before the value is set:
+   * Root element can be either a concealed element,
+   * i.e. the `template`:
    * ```html
    * <template sb-mark="list.#">
+   *   <!-- ONLY one child -->
    *   <li></li>
    * </template>
    * ```
-   * Note: this template should have only one child.
-   *
-   * In this case they should be removed from the template
-   * before being used.
-   *
-   * Of they can be placeholders such as:
+   * Or a rendered element, i.e. the `placeholder`:
    * ```html
-   * <li sb-mark="list.#"></li>
+   * <li sb-mark="list.#">zero</li>
    * ```
+   * `template` is maintained at the end of a list
+   * of elements and contains the `placeholder`.
    *
-   * In this case they should be put inside a template which
-   * follows the end of a list. This is to prevent a lost
-   * reference to the list item's UI.
-   *
-   * The inner
+   * `placeholder` is cloned to create list elements.
    */
   let template: HTMLTemplateElement;
   let placeholder: Element | null;
@@ -442,8 +458,7 @@ function initializeArray(
   }
 
   if (placeholder === null) {
-    console.warn(`empty template found for ${placeholderKey}`);
-    return;
+    return console.warn(`empty template found for ${placeholderKey}`);
   }
 
   const prefix = placeholderKey.slice(0, -2); // remove '.#' loop indicator
@@ -656,7 +671,7 @@ function registerTemplates(rootElement?: HTMLElement) {
 
 function stitchTemplate(arr: string[], ...args: unknown[]): string {
   let stitched: string = arr[0] ?? '';
-  for (let i = 1, length = arr.length; i < length; i++) {
+  for (let i = 1; i < arr.length; i++) {
     stitched += args[i - 1];
     stitched += arr[i];
   }
