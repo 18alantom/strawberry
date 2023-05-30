@@ -1,6 +1,6 @@
 type Complex = object | Function;
-type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
 type Reactive<T extends any> = T extends Complex ? T & Meta : never;
+type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
 type Watcher = (newValue: unknown) => unknown;
 type Directive = (
   el: Element, // The element to which the directive has been applied.
@@ -11,7 +11,6 @@ type Directive = (
   prop: string // property of the parent which points to the value, `parent[prop] ≈ value`
 ) => unknown;
 type DirectiveMap = Record<string, Directive>;
-type Placeholder = { key: string; el: Element; prev?: null | Element };
 type BasicAttrs = 'mark' | 'child' | 'if' | 'plc';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
@@ -20,7 +19,6 @@ let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
   null;
 let globalData: null | Reactive<{}> = null;
 let globalPrefix = 'sb-';
-const globalPlaceholderMap = new Map<Element, Placeholder[]>();
 
 const attr = (k: BasicAttrs) => globalPrefix + k;
 
@@ -233,6 +231,22 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       return;
     }
 
+    const isValueArray = Array.isArray(value);
+    if (isValueArray && !isDelete && !isLoop(key)) {
+      this.callDirectives(value, `${key}.#`, isDelete, parent, prop);
+    } else if (!isValueArray && isReactiveObject(value)) {
+      for (const k in value) {
+        this.callDirectives(
+          value[k as keyof typeof value],
+          getKey(k, key),
+          isDelete,
+          value,
+          k
+        );
+      }
+      return;
+    }
+
     const isArray = Array.isArray(parent);
     if (isArray && /\d+/.test(prop)) {
       appendChildNode(parent, prop, value);
@@ -252,7 +266,13 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static directives: DirectiveMap = {
-    mark,
+    mark: (el: Element, value: unknown, key: string, isDelete: boolean) => {
+      if (isDelete) {
+        remove(el);
+      }
+
+      setChildren(el, key, value);
+    },
     if: (el, value, key) => {
       const isshow = Boolean(value);
       const istemplate = el instanceof HTMLTemplateElement;
@@ -274,9 +294,6 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     },
   };
 }
-
-// @ts-ignore
-window.rh = ReactivityHandler;
 
 function appendChildNode(
   target: Reactive<unknown[]>, // The array
@@ -302,11 +319,14 @@ function appendChildNode(
       continue;
     }
 
+    /*
+    TODO: use the placeholder template to get and set child
     const child = getArrayChild(root, childPrefix, value);
     if (child === null) {
       continue;
     }
     root.appendChild(child);
+    */
   }
 }
 
@@ -324,6 +344,9 @@ function sortChildNodes(target: Reactive<unknown[]>) {
   const prefix = target.__sb_prefix;
   const els = document.querySelectorAll(`[${attr('mark')}="${prefix}"]`);
   for (const el of els) {
+    /**
+     * TODO: Respect location of appended child
+     */
     const children = [...el.children];
     children
       .sort((a, b) => {
@@ -345,34 +368,15 @@ function sortChildNodes(target: Reactive<unknown[]>) {
   }
 }
 
-function mark(el: Element, value: unknown, key: string, isDelete: boolean) {
-  if (isDelete) {
-    remove(el);
-  }
-
-  /*
-  if (Array.isArray(value)) {
-    return array(el, value, key);
-  } else if (typeof value === 'object' && value !== null) {
-    return object(el, value, key);
-  }
-
-  return text(el, value, key);
-  */
-  setChildren(el, key, value);
-}
-
 function remove(el: Element) {
   const isPlc = el.getAttribute(attr('plc')) === '1';
   const parent = el.parentElement;
 
-  globalPlaceholderMap.delete(el);
   if (!isPlc || !(el instanceof HTMLElement) || !parent) {
     return el.remove();
   }
 
   if (el.getAttribute(attr('mark')) === parent.getAttribute(attr('mark'))) {
-    globalPlaceholderMap.delete(parent);
     return parent.remove();
   }
 
@@ -384,277 +388,105 @@ function setChildren(root: Element, prefix: string, value: unknown) {
    * Alternative getChild implementation for the placeholder syntax
    * to define chilren elements of a marked element.
    */
-  const isArray = Array.isArray(value);
-  const isObject = typeof value === 'object' && value !== null;
-
-  /**
-   * If the value is neither an Array or an Object then just
-   * set the inner text and return.
-   */
-  if (root instanceof HTMLElement && !isArray && !isObject) {
+  if (Array.isArray(value) && isLoop(prefix)) {
+    initializeArray(root, prefix, value);
+  } else if (isReactiveObject(value)) {
+    // ReactivityHandler.callDirectives(value, prefix, false, null, null);
+  } else if (root instanceof HTMLElement) {
     root.innerText = String(value ?? '');
   }
-
-  if (!isArray && !isObject) {
-    return;
-  }
-
-  /**
-   * Updates `globalTemplateMap`.
-   *
-   * This object keeps a map from an element and the children element
-   * templates it should use.
-   *
-   * Each element template element has an associated key, if the value
-   * being stored is an array then the key is '#', else it is the object
-   * property name.
-   */
-  const placeholders = getPlaceholdersFromRoot(root, prefix, value);
-
-  /**
-   * Calls setChildren recursively to build the root elements
-   * child tree. Leaf nodes just have their innerText set.
-   */
-  for (const placeholder of placeholders) {
-    const { key, el: childRootPlaceholder } = placeholder;
-    const isLoop = key === '#';
-
-    /**
-     * Handling Objects:
-     * If not loop key can be props of a regular object
-     * or array props like 'length'.
-     */
-    if (!isLoop) {
-      const childRoot = childRootPlaceholder.cloneNode(true);
-      if (!(childRoot instanceof Element)) {
-        return;
-      }
-
-      const childValue = (value as Record<string, unknown>)[key];
-      const childPrefix = getKey(key, prefix);
-
-      childRoot.setAttribute(attr('mark'), childPrefix);
-      setChildren(childRoot, childPrefix, childValue);
-
-      root.appendChild(childRoot);
-      continue;
-    }
-
-    /**
-     * If isLoop and !isArray then incorrect usage of '#'
-     */
-    if (!isArray) {
-      console.warn('placeholder key "#" found for non Array value: ', value);
-      continue;
-    }
-
-    /**
-     * Handling Arrays:
-     * If isLoop and isArray then loop over array and append
-     * the children.
-     */
-    for (const idx in value) {
-      const childRoot = childRootPlaceholder.cloneNode(true);
-      if (!(childRoot instanceof Element)) {
-        return;
-      }
-
-      const childValue = value[idx];
-      const childPrefix = getKey(idx, prefix);
-
-      childRoot.setAttribute(attr('mark'), childPrefix);
-      setChildren(childRoot, childPrefix, childValue);
-
-      root.appendChild(childRoot);
-    }
-  }
 }
 
-function getPlaceholdersFromRoot(
+function initializeArray(
   root: Element,
-  prefix: string,
-  value: unknown
-): Placeholder[] {
-  const placeholders: Placeholder[] = globalPlaceholderMap.get(root) ?? [];
-  if (globalPlaceholderMap.has(root)) {
-    return placeholders;
+  placeholderKey: string,
+  value: unknown[]
+) {
+  // TODO: delete preexisting list items
+
+  /**
+   * Array placeholders can be inside templates, i.e. if
+   * they are not to be rendered before the value is set:
+   * ```html
+   * <template sb-mark="list.#">
+   *   <li></li>
+   * </template>
+   * ```
+   * Note: this template should have only one child.
+   *
+   * In this case they should be removed from the template
+   * before being used.
+   *
+   * Of they can be placeholders such as:
+   * ```html
+   * <li sb-mark="list.#"></li>
+   * ```
+   *
+   * In this case they should be put inside a template which
+   * follows the end of a list. This is to prevent a lost
+   * reference to the list item's UI.
+   *
+   * The inner
+   */
+  let template: HTMLTemplateElement;
+  let placeholder: Element | null;
+  if (root instanceof HTMLTemplateElement) {
+    template = root;
+    placeholder = root.content.firstElementChild;
+  } else {
+    placeholder = root;
+    template = document.createElement('template');
+    template.appendChild(root);
+    template.setAttribute(attr('mark'), placeholderKey);
+    root.replaceWith(template);
   }
 
-  const isArray = Array.isArray(value);
-  const isObject = typeof value === 'object' && value !== null;
-
-  const marked = root.querySelectorAll(`[${attr('mark')}]`);
-  if (!marked) {
-    return placeholders;
-  }
-
-  for (const el of marked) {
-    if (!isFirstMarkedChild(el, root)) {
-      continue;
-    }
-
-    /**
-     * Examples:
-     * $. pkey       key   desc
-     * 1. list.#     #     root has sb-mark="list"
-     * 2. user.name  name  root has sb-mark="user"
-     *
-     * pkey can be short or full:
-     * - Full:  users > users.# > users.#.name
-     * - Short: users >       # >         name
-     *
-     * prefix is implicit from the markup
-     */
-
-    const pkey = el.getAttribute(attr('mark')) ?? '';
-    const isFullPkey = pkey.startsWith(prefix.replace(/\d+/g, '#'));
-    const isShortPkey =
-      (isArray && pkey === '#') || (isObject && pkey in value);
-
-    if (!isFullPkey && !isShortPkey) {
-      continue;
-    }
-
-    let key = pkey;
-    if (isFullPkey) {
-      key = pkey.slice(prefix.length + 1);
-    }
-
-    const placeholder: Placeholder = { key, el };
-    /**
-     * this will remove firstmarkedchild by not immediate child elements too
-     * this causes displacement of the element. nested elements will then be pushed
-     * which breaks the flow
-     *
-     * the ideal solution to this maintains a reference to the parent, anyway to reuse
-     * the placeholders without having to remove them
-     *
-     * 💡 IDEA
-     * - remove only loop placeholders.
-     * - maintain a marker that says where a loop item element has to be appended after.
-     * - if no marker then it's appended to the root.
-     *
-     * Only array placeholders are removed as these are variable, i.e. depending
-     * on the length of the array, `n` number of placeholders are appended.
-     *
-     * For non array placeholders, the location of the place holder is static and
-     * the key used in `sb-mark` is might be an actual key.
-     */
-
-    if (key === '#') {
-      placeholder.prev = el.previousElementSibling;
-      el.remove();
-    }
-
-    placeholders.push(placeholder);
-  }
-
-  globalPlaceholderMap.set(root, placeholders);
-  return placeholders;
-}
-
-/**
- * Traverses up the tree to check if `child` is the first marked element
- * of `root`.
- */
-function isFirstMarkedChild(child: Element, root: Element): boolean {
-  const parent = child.parentElement;
-  if (!parent?.hasAttribute(attr('mark')) && parent) {
-    return isFirstMarkedChild(parent, root);
-  }
-
-  return parent === root;
-}
-
-function getArrayChild(root: Element, childKey: string, childValue: unknown) {
-  const placeholders = globalPlaceholderMap.get(root);
-  const placeholder = placeholders?.find((p) => p.key === '#');
-  if (!placeholder) {
-    return null;
-  }
-
-  const childRoot = placeholder.el.cloneNode(true);
-  if (!(childRoot instanceof Element)) {
-    return null;
-  }
-
-  setChildren(childRoot, childKey, childValue);
-  return childRoot;
-}
-
-function text(el: Element, value: unknown, key: string) {
-  if (el instanceof HTMLElement && value !== undefined) {
-    el.innerText = String(value);
-  }
-
-  el.setAttribute(attr('mark'), key);
-}
-
-function array(el: Element, value: unknown[], key: string) {
-  const childTag = el.getAttribute(attr('child'));
-  if (!childTag) {
-    console.warn('marked el with array value has no child', value, el, key);
+  if (placeholder === null) {
+    console.warn(`empty template found for ${placeholderKey}`);
     return;
   }
 
-  const children = value.map((item, i) =>
-    getChild(childTag, getKey(String(i), key), item)
-  );
+  const prefix = placeholderKey.slice(0, -2); // remove '.#' loop indicator
+  for (const idx in value) {
+    const item = value[idx];
+    const key = getKey(idx, prefix);
 
-  el.setAttribute(attr('mark'), key);
-  el.replaceChildren(...children);
-}
-
-function object(el: Element, value: object, key: string) {
-  const childTag = el.getAttribute(attr('child'));
-  if (!childTag) {
-    return setSlots(el, key, value);
-  }
-
-  const child = getChild(childTag, key, value);
-  child.setAttribute(attr('mark'), key);
-  el.replaceWith(child);
-}
-
-function getChild(tag: string, prefix: string, value: unknown): HTMLElement {
-  const el = document.createElement(tag);
-  setSlots(el, prefix, value);
-  return el;
-}
-
-function setSlots(el: Element, prefix: string, value: unknown): void {
-  const slots = el.shadowRoot?.querySelectorAll('slot');
-  if (!slots?.length) {
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      value = undefined;
+    const clone = placeholder.cloneNode(true);
+    /**
+     * TODO: update all marks in the placeholder, nested
+     * lists will have multiple '#' if the full key is written
+     * out. example:
+     *
+     * <div sb-mark="users.#">
+     *   <h1 sb-mark="users.#.name"></h1>
+     *   <div>
+     *     <p sb-mark="users.#.things.#"></p>
+     *   </div>
+     * </div>
+     *
+     * in the above example all 'user.#' will have to be replaced
+     * on cloning to be 'user.0' or whatever the index `user.${idx}`
+     */
+    if (!(clone instanceof Element)) {
+      continue;
     }
 
-    return mark(el, value, prefix, false);
+    clone.setAttribute(attr('mark'), key); // change placeholder mark to actual mark
+    template.before(clone); // placeholder is always the list element
+    setChildren(clone, key, item);
+  }
+}
+
+function isLoop(key: string) {
+  return key.endsWith('.#');
+}
+
+function isReactiveObject(value: unknown): value is Reactive<object> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
   }
 
-  el.replaceChildren();
-  for (const slot of slots) {
-    const childTag = slot.getAttribute(attr('child'));
-    const childEl = document.createElement(childTag ?? 'span');
-
-    let childVal = value;
-    let childKey = prefix;
-
-    const sname = slot.getAttribute('name');
-    if (sname) {
-      childVal = (value as Record<string, unknown>)?.[sname];
-      childKey = getKey(sname, prefix);
-      childEl.setAttribute('slot', sname);
-    }
-
-    if (!childTag) {
-      childEl.setAttribute(attr('plc'), '1');
-    }
-
-    mark(childEl, childVal, childKey, false);
-    el.appendChild(childEl);
-  }
-  el.setAttribute(attr('mark'), prefix);
+  return '__sb_prefix' in value;
 }
 
 function getKey(prop: string, prefix: string) {
@@ -727,7 +559,7 @@ function readyStateChangeHandler() {
   }
 }
 
-export function executeDefered() {
+function executeDefered() {
   const deferQueue = globalDefer ?? [];
   globalDefer = null; // Needs to be set before calling directives else recursion
   deferQueue.forEach((params) => ReactivityHandler.callDirectives(...params));
