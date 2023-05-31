@@ -11,7 +11,7 @@ type Directive = (
   prop: string // Property of the parent which points to the value, `parent[prop] ≈ value`
 ) => unknown;
 type DirectiveMap = Record<string, Directive>;
-type BasicAttrs = 'mark' | 'child' | 'if' | 'plc';
+type BasicAttrs = 'mark' | 'child' | 'if';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -236,6 +236,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     const isValueArray = Array.isArray(value);
     if (isValueArray && !isDelete && !isLoop(key)) {
       this.callDirectives(value, `${key}.#`, isDelete, parent, prop);
+      // TODO: Should this return?
     } else if (!isValueArray && isReactiveObject(value)) {
       for (const k in value) {
         this.callDirectives(
@@ -380,10 +381,9 @@ function sortChildNodes(target: Reactive<unknown[]>) {
 }
 
 function remove(el: Element) {
-  const isPlc = el.getAttribute(attr('plc')) === '1';
   const parent = el.parentElement;
 
-  if (!isPlc || !(el instanceof HTMLElement) || !parent) {
+  if (!(el instanceof HTMLElement) || !parent) {
     return el.remove();
   }
 
@@ -485,6 +485,7 @@ function initializeArray(
   if (root instanceof HTMLTemplateElement) {
     template = root;
     placeholder = root.content.firstElementChild;
+    placeholder?.setAttribute(attr('mark'), placeholderKey);
   } else {
     placeholder = root;
     template = document.createElement('template');
@@ -498,32 +499,45 @@ function initializeArray(
   }
 
   const prefix = placeholderKey.slice(0, -2); // remove '.#' loop indicator
+
+  /**
+   * For each array item, insert a child element before the
+   * placeholder
+   */
   for (const idx in value) {
     const item = value[idx];
     const key = getKey(idx, prefix);
 
     const clone = placeholder.cloneNode(true);
-    /**
-     * TODO: update all marks in the placeholder, nested
-     * lists will have multiple '#' if the full key is written
-     * out. example:
-     *
-     * <div sb-mark="users.#">
-     *   <h1 sb-mark="users.#.name"></h1>
-     *   <div>
-     *     <p sb-mark="users.#.things.#"></p>
-     *   </div>
-     * </div>
-     *
-     * in the above example all 'user.#' will have to be replaced
-     * on cloning to be 'user.0' or whatever the index `user.${idx}`
-     */
     if (!(clone instanceof Element)) {
       continue;
     }
 
-    clone.setAttribute(attr('mark'), key); // change placeholder key to actual key
-    // TODO: need to update other attributes to actual keys
+    /**
+     * Change directive keys from placeholder keys
+     * eg `"users.#.name"` to actual keys eg `"users.0.name"`
+     */
+    for (const attrSuffix in ReactivityHandler.directives) {
+      const attrName = globalPrefix + attrSuffix;
+      /**
+       * Change clone's directive keys
+       */
+      if (clone.getAttribute(attrName) === placeholderKey) {
+        clone.setAttribute(attrName, key);
+      }
+
+      /**
+       * Change clone's chilren's directive keys
+       */
+      clone.querySelectorAll(`[${attrName}]`).forEach((ch) => {
+        const pkey = ch.getAttribute(attrName);
+        if (pkey?.startsWith(placeholderKey)) {
+          const newPkey = key + pkey.slice(placeholderKey.length);
+          ch.setAttribute(attr('mark'), newPkey);
+        }
+      });
+    }
+
     template.before(clone); // template is always the final list element
     setChildren(clone, key, item, value, idx);
   }
