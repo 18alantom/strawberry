@@ -224,8 +224,10 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     key: string,
     isDelete: boolean,
     parent: Reactive<object>,
-    prop: string
+    prop: string,
+    searchRoot?: Element | Document
   ) {
+    searchRoot ??= document;
     if (globalDefer) {
       globalDefer.push([value, key, isDelete, parent, prop]);
       return;
@@ -247,18 +249,18 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       return;
     }
 
-    const isArray = Array.isArray(parent);
-    if (isArray && /\d+/.test(prop)) {
+    const isParentArray = Array.isArray(parent);
+    if (isParentArray && /\d+/.test(prop)) {
       appendChildNode(parent, prop, value);
     }
 
-    if (isArray && prop === 'length') {
+    if (isParentArray && prop === 'length') {
       sortChildNodes(parent);
     }
 
     for (const attrSuffix in this.directives) {
       const directive = this.directives[attrSuffix]!;
-      const els = document.querySelectorAll(
+      const els = searchRoot.querySelectorAll(
         `[${globalPrefix + attrSuffix}='${key}']`
       );
       els.forEach((el) => directive(el, value, key, isDelete, parent, prop));
@@ -266,18 +268,27 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static directives: DirectiveMap = {
-    mark: (el: Element, value: unknown, key: string, isDelete: boolean) => {
+    mark: (el, value, key, isDelete, parent, prop) => {
       if (isDelete) {
-        remove(el);
+        return remove(el);
       }
 
-      setChildren(el, key, value);
+      setChildren(el, key, value, parent, prop);
     },
     if: (el, value, key) => {
+      /**
+       * TODO: when taking out of a template, value is taken from
+       * the content, so it should be appended to the content, else
+       * the value will be queriable and is not concealed
+       *
+       * changes:
+       * - const child = el.content.firstElementChild;
+       * - temp.content.appendChild(el.cloneNode)
+       */
       const isshow = Boolean(value);
       const istemplate = el instanceof HTMLTemplateElement;
       if (isshow && istemplate) {
-        const child = el.children[0] ?? el.content.children[0];
+        const child = el.firstElementChild ?? el.content.firstElementChild;
         if (!child) {
           return;
         }
@@ -383,15 +394,34 @@ function remove(el: Element) {
   el.remove();
 }
 
-function setChildren(root: Element, prefix: string, value: unknown) {
+function setChildren(
+  root: Element,
+  prefix: string,
+  value: unknown,
+  parent: Reactive<object>,
+  prop: string
+) {
   /**
    * Alternative getChild implementation for the placeholder syntax
    * to define chilren elements of a marked element.
    */
   if (Array.isArray(value) && isLoop(prefix)) {
+    /**
+     * Called only when an array is set on a reactive data object which
+     * causes `setDirective` to be recalled with the placeholder key '#'.
+     */
     initializeArray(root, prefix, value);
   } else if (isReactiveObject(value)) {
-    // ReactivityHandler.callDirectives(value, prefix, false, null, null);
+    /**
+     * Called only when `setChildren` is recursively called by `initializeArray`
+     * when array item is a reactive object.
+     *
+     * In this case:
+     * - `root`: is a _just_ appended item cloned from a list item placeholder element.
+     * - `parent`: is the array that contains the list item
+     * - `prop`: is the index of the array
+     */
+    ReactivityHandler.callDirectives(value, prefix, false, parent, prop, root);
   } else if (root instanceof HTMLElement) {
     root.innerText = String(value ?? '');
   }
@@ -402,16 +432,22 @@ function initializeArray(
   placeholderKey: string,
   value: unknown[]
 ): void {
+  if (!isReactiveObject(value)) {
+    return console.warn(
+      `array not converted to reactive object, key: ${placeholderKey}, array: ${value}`
+    );
+  }
+
   /**
    * When a new list is set previous list item elements should be
    * deleted. Empty list deletes all items, but keeps the placeholder.
    *
-   * When a list is updated a child element is prepended before the
+   * When a array is updated a child element is prepended before the
    * placeholder element.
    */
   let prev = root.previousElementSibling;
   while (prev) {
-    const curr = prev as Element | null; // TS doesn't check this correctly
+    const curr = prev as Element | null; // TS doesn't assign correct type
     prev = curr?.previousElementSibling ?? null;
 
     const key = curr?.getAttribute(attr('mark'));
@@ -419,7 +455,7 @@ function initializeArray(
       continue;
     }
 
-    if (key.replace(/\d+$/, '#') === placeholderKey) {
+    if (key.replace(/\d+$/, '#') === placeholderKey && key !== placeholderKey) {
       curr?.remove();
     } else {
       break;
@@ -452,7 +488,7 @@ function initializeArray(
   } else {
     placeholder = root;
     template = document.createElement('template');
-    template.appendChild(root);
+    template.content.appendChild(root.cloneNode(true));
     template.setAttribute(attr('mark'), placeholderKey);
     root.replaceWith(template);
   }
@@ -486,9 +522,10 @@ function initializeArray(
       continue;
     }
 
-    clone.setAttribute(attr('mark'), key); // change placeholder mark to actual mark
-    template.before(clone); // placeholder is always the list element
-    setChildren(clone, key, item);
+    clone.setAttribute(attr('mark'), key); // change placeholder key to actual key
+    // TODO: need to update other attributes to actual keys
+    template.before(clone); // template is always the final list element
+    setChildren(clone, key, item, value, idx);
   }
 }
 
