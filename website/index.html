@@ -20,10 +20,7 @@
       name="description"
       content="Zero-dependency, build-free JavaScript framework for the artisanal web."
     />
-    <meta
-      name="image"
-      content="https://strawberry.quest/assets/banner.png"
-    />
+    <meta name="image" content="https://strawberry.quest/assets/banner.png" />
     <meta name="language" content="en-US" />
 
     <!-- OG Meta Tags -->
@@ -60,25 +57,24 @@
     <link rel="shortcut icon" href="assets/sb.png" />
 
     <!-- Loading Local Styles -->
-    <link rel="stylesheet" href="assets/common.css" />
     <link rel="stylesheet" href="assets/index.css" />
-    <link rel="stylesheet" href="assets/example.css" />
-    <link rel="stylesheet" href="assets/hljs-html.css" />
-    <link rel="stylesheet preload" href="assets/fonts/fonts.css" />
-
-    <!-- Loading Highlight JS and Example Manager -->
-    <script src="highlight.min.js"></script>
-    <script src="index.js"></script>
-    <script>
-      window.addEventListener('DOMContentLoaded', highlight);
-      const m = new Manager();
-    </script>
     <style>
       #leadin > p,
       #simple-example {
         margin: 0;
       }
     </style>
+
+    <!-- Loading Highlight JS and Example Manager -->
+    <script src="highlight.min.js"></script>
+    <script src="index.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        highlight();
+        setDataCopy();
+      });
+      const m = new Manager();
+    </script>
   </head>
   <body>
     <!-- Header -->
@@ -393,19 +389,4 @@
       <p>©2023</p>
     </footer>
   </body>
-  <script>
-    const key = 'data-copy';
-    const success = 'Copied :)';
-    for (const el of document.getElementsByClassName('copy')) {
-      el.addEventListener('click', (e) => {
-        navigator.clipboard.writeText(el.innerText);
-
-        const c = el.getAttribute(key);
-        el.setAttribute(key, success);
-        if (c !== success) {
-          setTimeout(() => el.setAttribute('data-copy', c), 1000);
-        }
-      });
-    }
-  </script>
 </html>

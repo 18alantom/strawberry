@@ -233,3 +233,19 @@ function centerView() {
   const w2 = view.firstChild.getBoundingClientRect().width;
   view.scroll((w2 - w1) / 2, 0);
 }
+
+function setDataCopy() {
+  const key = 'data-copy';
+  const success = 'Copied :)';
+  for (const el of document.getElementsByClassName('copy')) {
+    el.addEventListener('click', (e) => {
+      navigator.clipboard.writeText(el.innerText);
+
+      const c = el.getAttribute(key);
+      el.setAttribute(key, success);
+      if (c !== success) {
+        setTimeout(() => el.setAttribute('data-copy', c), 1000);
+      }
+    });
+  }
+}
