@@ -252,11 +252,11 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
     const isParentArray = Array.isArray(parent);
     if (isParentArray && /\d+/.test(prop)) {
-      appendChildNode(parent, prop, value);
+      insertArrayItemElement(value, key, parent, prop);
     }
 
     if (isParentArray && prop === 'length') {
-      sortChildNodes(parent);
+      // sortChildNodes(parent);
     }
 
     for (const attrSuffix in this.directives) {
@@ -307,10 +307,17 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   };
 }
 
-function appendChildNode(
-  target: Reactive<unknown[]>, // The array
-  prop: string, // Index of the pushed element
-  value: unknown // Value that was pushed
+/**
+ * @param item value being pushed to the array
+ * @param key prefixed key (eg: "list.3")
+ * @param array array into which the value is pushed
+ * @param idx index of the newly pushed element (eg: "3")
+ */
+function insertArrayItemElement(
+  item: unknown,
+  key: string,
+  array: Reactive<unknown[]>,
+  idx: string
 ) {
   /**
    * Called only when an array element is updated,
@@ -319,30 +326,38 @@ function appendChildNode(
    * When an item is pushed to an Array, the DOM element that maps to that
    * item does not exist.
    *
-   * This function appends a child for the pushed item.
+   * This function inserts the child element before the template.
    */
-  const parentKey = target.__sb_prefix;
-  const roots = document.querySelectorAll(`[${attr('mark')}="${parentKey}"]`);
+  const prefix = array.__sb_prefix;
+  const placeholderKey = key.replace(/\d+$/, '#');
+  const templates = document.querySelectorAll(
+    `[${attr('mark')}="${placeholderKey}"]`
+  );
 
-  const childPrefix = getKey(prop, parentKey);
-  for (const root of roots) {
-    const ch = root.querySelector(`[${attr('mark')}="${childPrefix}"]`);
-    if (ch !== null) {
+  for (const template of templates) {
+    if (!(template instanceof HTMLTemplateElement)) {
       continue;
     }
 
-    /*
-    TODO: use the placeholder template to get and set child
-    const child = getArrayChild(root, childPrefix, value);
-    if (child === null) {
+    const clone = template.content.firstElementChild?.cloneNode(true);
+    if (!(clone instanceof Element)) {
       continue;
     }
-    root.appendChild(child);
-    */
+
+    clone.setAttribute(attr('mark'), placeholderKey);
+    insertChildBeforeTemplate(
+      idx,
+      prefix,
+      placeholderKey,
+      item,
+      array,
+      clone,
+      template
+    );
   }
 }
 
-function sortChildNodes(target: Reactive<unknown[]>) {
+function sortArrayItemElements(target: Reactive<unknown[]>) {
   /**
    * Called only when length prop of an array is set.
    *
@@ -405,13 +420,14 @@ function setChildren(
    * Alternative getChild implementation for the placeholder syntax
    * to define chilren elements of a marked element.
    */
-  if (Array.isArray(value) && isLoop(prefix)) {
+  const isRDO = isReactiveObject(value);
+  if (isRDO && Array.isArray(value) && isLoop(prefix)) {
     /**
      * Called only when an array is set on a reactive data object which
      * causes `setDirective` to be recalled with the placeholder key '#'.
      */
     initializeArray(root, prefix, value);
-  } else if (isReactiveObject(value)) {
+  } else if (isRDO) {
     /**
      * Called only when `setChildren` is recursively called by `initializeArray`
      * when array item is a reactive object.
@@ -430,14 +446,8 @@ function setChildren(
 function initializeArray(
   root: Element,
   placeholderKey: string,
-  value: unknown[]
+  array: Reactive<unknown[]>
 ): void {
-  if (!isReactiveObject(value)) {
-    return console.warn(
-      `array not converted to reactive object, key: ${placeholderKey}, array: ${value}`
-    );
-  }
-
   /**
    * When a new list is set previous list item elements should be
    * deleted. Empty list deletes all items, but keeps the placeholder.
@@ -475,6 +485,7 @@ function initializeArray(
    * ```html
    * <li sb-mark="list.#">zero</li>
    * ```
+   * 
    * `template` is maintained at the end of a list
    * of elements and contains the `placeholder`.
    *
@@ -498,49 +509,76 @@ function initializeArray(
     return console.warn(`empty template found for ${placeholderKey}`);
   }
 
-  const prefix = placeholderKey.slice(0, -2); // remove '.#' loop indicator
-
   /**
    * For each array item, insert a child element before the
    * placeholder
    */
-  for (const idx in value) {
-    const item = value[idx];
-    const key = getKey(idx, prefix);
-
+  const prefix = placeholderKey.slice(0, -2); // remove '.#' loop indicator
+  for (const idx in array) {
     const clone = placeholder.cloneNode(true);
     if (!(clone instanceof Element)) {
       continue;
     }
 
-    /**
-     * Change directive keys from placeholder keys
-     * eg `"users.#.name"` to actual keys eg `"users.0.name"`
-     */
-    for (const attrSuffix in ReactivityHandler.directives) {
-      const attrName = globalPrefix + attrSuffix;
-      /**
-       * Change clone's directive keys
-       */
-      if (clone.getAttribute(attrName) === placeholderKey) {
-        clone.setAttribute(attrName, key);
-      }
+    insertChildBeforeTemplate(
+      idx,
+      prefix,
+      placeholderKey,
+      array[idx],
+      array,
+      clone,
+      template
+    );
+  }
+}
 
-      /**
-       * Change clone's chilren's directive keys
-       */
-      clone.querySelectorAll(`[${attrName}]`).forEach((ch) => {
-        const pkey = ch.getAttribute(attrName);
-        if (pkey?.startsWith(placeholderKey)) {
-          const newPkey = key + pkey.slice(placeholderKey.length);
-          ch.setAttribute(attr('mark'), newPkey);
-        }
-      });
+/**
+ * @param idx index of `item` in `array` eg: "0"
+ * @param prefix item element key prefix i.e. placholder key without ".#"
+ * @param placeholderKey key set on the placeholder element eg: "list.#"
+ * @param item item inside the array (passed separately to prevent additional "gets")
+ * @param array reactive data array containing `item`
+ * @param clone clone of the placeholder item
+ * @param template template before which the the clone is to be inserted
+ */
+function insertChildBeforeTemplate(
+  idx: string,
+  prefix: string,
+  placeholderKey: string,
+  item: unknown,
+  array: Reactive<unknown[]>,
+  clone: Element,
+  template: HTMLTemplateElement
+) {
+  const key = getKey(idx, prefix);
+
+  /**
+   * Change directive keys from placeholder keys
+   * eg `"users.#.name"` to actual keys eg `"users.0.name"`
+   */
+  for (const attrSuffix in ReactivityHandler.directives) {
+    const attrName = globalPrefix + attrSuffix;
+    /**
+     * Change clone's directive keys
+     */
+    if (clone.getAttribute(attrName) === placeholderKey) {
+      clone.setAttribute(attrName, key);
     }
 
-    template.before(clone); // template is always the final list element
-    setChildren(clone, key, item, value, idx);
+    /**
+     * Change clone's chilren's directive keys
+     */
+    clone.querySelectorAll(`[${attrName}]`).forEach((ch) => {
+      const pkey = ch.getAttribute(attrName);
+      if (pkey?.startsWith(placeholderKey)) {
+        const newPkey = key + pkey.slice(placeholderKey.length);
+        ch.setAttribute(attr('mark'), newPkey);
+      }
+    });
   }
+
+  template.before(clone); // template is always the final list element
+  setChildren(clone, key, item, array, idx);
 }
 
 function isLoop(key: string) {
@@ -694,7 +732,6 @@ export async function load(files: string | string[]) {
  *         </template>`);
  *    ```
  */
-
 export function register(root: string[], ...args: unknown[]): void;
 export function register(root: HTMLElement): void;
 export function register(template: string): void;
