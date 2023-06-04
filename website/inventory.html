@@ -175,8 +175,21 @@
       </div>
     </div>
 
-    <div id="inv-items" sb-mark="items" sb-child="inv-item"></div>
-    <div id="inv-moves" sb-mark="moves" sb-child="inv-move"></div>
+    <div id="inv-items">
+      <inv-item sb-mark="items.#">
+        <span slot="name" sb-mark="items.#.name"></span>
+        <span slot="quantity" sb-mark="items.#.quantity"></span>
+      </inv-item>
+    </div>
+
+    <div id="inv-moves" sb-mark="moves" sb-child="inv-move">
+      <inv-move sb-mark="moves.#">
+        <span slot="index" sb-mark="moves.#.index"></span>
+        <span slot="time" sb-mark="moves.#.time"></span>
+        <span slot="item" sb-mark="moves.#.item"></span>
+        <span slot="quantity" sb-mark="moves.#.quantity"></span>
+      </inv-move>
+    </div>
   </div>
 </main>
 <!-- BODY_END -->
@@ -230,7 +243,12 @@
     const item = document.getElementById('move-item')?.value;
     const qty = Number(document.getElementById('move-qty')?.value);
 
-    if (typeof item === 'string' && item && !Number.isNaN(qty) && Number.isFinite(qty)) {
+    if (
+      typeof item === 'string' &&
+      item &&
+      !Number.isNaN(qty) &&
+      Number.isFinite(qty)
+    ) {
       move(item, qty);
     }
   });

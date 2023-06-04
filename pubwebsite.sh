@@ -13,7 +13,7 @@ set -e
 
 cd website
 
-curl -so sb.min.js https://unpkg.com/sberry@0.0.0-alpha.1/dist/sb.min.js
+curl -so sb.min.js https://unpkg.com/sberry@0.0.1-alpha.0/dist/sb.min.js
 curl -so highlight.min.js https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js
 
 
