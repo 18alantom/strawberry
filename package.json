@@ -1,6 +1,6 @@
 {
   "name": "sberry",
-  "version": "0.0.0-alpha.1",
+  "version": "0.0.1-alpha.0",
   "homepage": "http://18alantom.github.io/strawberry",
   "description": "Zero-dependecy, build-free framework for the artisanal web.",
   "main": "dist/sb.min.js",
