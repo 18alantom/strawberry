@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sb Test - Loops</title>
+    <style>
+      html,
+      body {
+        margin: 0px;
+        background-color: rgb(0, 0, 0);
+        color: white;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+    </style>
+    <script src="../index.js"></script>
+    <link rel="stylesheet" href="test.css" />
+    <script src="./test.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Loop Tests</h1>
+      <div>
+        <p>Success: <span id="success">0</span></p>
+        <p>Failure: <span id="failure">0</span></p>
+        <p>Total: <span id="total">0</span></p>
+      </div>
+    </main>
+    <script>
+      const data = sb.init();
+    </script>
+
+    <!-- List of Primitives -->
+    <ul id="ul1">
+      <li sb-mark="one.#">placeholder</li>
+    </ul>
+    <script>
+      const ul1 = document.getElementById('ul1');
+      test(
+        ul1.children[0] instanceof HTMLLIElement,
+        'ul has placeholder li element'
+      );
+
+      data.one = [];
+      test(
+        ul1.children[0] instanceof HTMLTemplateElement,
+        'ul placeholder in template'
+      );
+
+      data.one.push('one');
+      test(
+        ul1.children[0] instanceof HTMLLIElement,
+        'ul[0] is an li element (no for)'
+      );
+      test(
+        ul1.children[0].innerText === 'one',
+        `ul[0] innerText is "one" (no for)`
+      );
+
+      data.one.push('two', 'three', 'four');
+      test(data.one.length === 4, 'one has 4 items');
+      test(
+        ul1.childElementCount === data.one.length + 1,
+        'ul has one additional element for placeholder'
+      );
+
+      for (const idx in data.one) {
+        test(
+          ul1.children[idx] instanceof HTMLLIElement,
+          `ul[${idx}] is an li element`
+        );
+        test(
+          ul1.children[idx].innerText === data.one[idx],
+          `ul[${idx}] innerText is "${data.one[idx]}"`
+        );
+      }
+
+      data.one.pop();
+      test(
+        ul1.lastElementChild.previousElementSibling.innerText === 'three',
+        'last element "three" after pop'
+      );
+
+      data.one.push('four');
+      test(
+        ul1.lastElementChild.previousElementSibling.innerText === 'four',
+        'last element "four" after push'
+      );
+
+      data.one.shift();
+      test(
+        ul1.firstElementChild.innerText === 'two',
+        'first element "two" after shift'
+      );
+
+      data.one.unshift('one');
+      test(
+        ul1.firstElementChild.innerText === 'one',
+        'first element "one" after unshift'
+      );
+
+      data.one.splice(1, 2, '1', '2');
+      test(
+        ul1.children[1].innerText === '1',
+        'ul[1] innerText "1" after splice'
+      );
+      test(
+        ul1.children[2].innerText === '2',
+        'ul[2] innerText "2" after splice'
+      );
+      test(
+        ul1.childElementCount === 5,
+        '5 children after splice delete 2 add 2'
+      );
+
+      data.one[0] = '0';
+      test(ul1.children[0].innerText === '0', 'ul[0] innerText "0" after set');
+
+      data.one[3] = '3';
+      test(ul1.children[3].innerText === '3', 'ul[0] innerText "0" after set');
+
+      data.one = [];
+      test(ul1.childElementCount === 1, '1 child after empty list set');
+    </script>
+
+    <!-- List of Objects -->
+    <ul id="ul2">
+      <li sb-mark="two.#">
+        <span sb-mark="two.#.a"></span>
+        <span sb-mark="two.#.b"></span>
+      </li>
+    </ul>
+
+    <script>
+      const ul2 = document.getElementById('ul2');
+      test(
+        ul2.children[0] instanceof HTMLLIElement,
+        'ul2 has placeholder li element'
+      );
+      test(ul2.children[0].childElementCount === 2, 'ul2 li has 2 children');
+
+      data.two = [];
+      test(
+        ul2.children[0] instanceof HTMLTemplateElement,
+        'u2 placeholder in template'
+      );
+
+      data.two.push({ a: '0.a', b: '0.b' });
+      test(
+        ul2.children[0]?.children[0].innerText === '0.a',
+        'ul[0][0] innerText is "0.a"'
+      );
+
+      data.two.push(
+        { a: '1.a', b: '1.b' },
+        { a: '2.a', b: '2.b' },
+        { a: '3.a', b: '3.b' }
+      );
+
+      test(data.two.length === 4, 'two has 4 items');
+      test(
+        ul2.childElementCount === data.two.length + 1,
+        'ul has one additional element for placeholder'
+      );
+
+      for (const idx in data.two) {
+        test(
+          ul2.children[idx].children[0].innerText === `${idx}.a`,
+          `ul[${idx}][0] innerText is "${idx}.a"`
+        );
+        test(
+          ul2.children[idx].children[1].innerText === `${idx}.b`,
+          `ul[${idx}][1] innerText is "${idx}.b"`
+        );
+      }
+
+      data.two.pop();
+      test(
+        ul2.lastElementChild.previousElementSibling.firstElementChild
+          .innerText === '2.a',
+        'last element first child "2.a" after pop'
+      );
+
+      data.two.push({ a: '3.a', b: '3.b' });
+      test(
+        ul2.lastElementChild.previousElementSibling.firstElementChild
+          .innerText === '3.a',
+        'last element first child "3.a" after push'
+      );
+
+      data.two.shift();
+      test(
+        ul2.firstElementChild.firstElementChild.innerText === '1.a',
+        'first element first child "1.a" after shift'
+      );
+
+      data.two.unshift({ a: '0.a', b: '0.b' });
+      test(
+        ul2.firstElementChild.firstElementChild.innerText === '0.a',
+        'first element first child "0.a" after unshift'
+      );
+
+      data.two.splice(1, 2, { a: 'x', b: 'y' });
+      test(
+        ul2.children[1].firstElementChild.innerText === 'x',
+        'ul2[1][0] innerText "x" after splice'
+      );
+      test(
+        ul2.children[2].firstElementChild.innerText === '3.a',
+        'ul[2][0] innerText "3.a" after splice'
+      );
+      test(
+        ul2.childElementCount === 4,
+        '5 children after splice delete 2 add 1'
+      );
+
+      data.two[0].a = '0';
+      test(
+        ul2.children[0].firstElementChild.innerText === '0',
+        'ul[0][0] innerText "0" after set'
+      );
+      test(
+        ul2.children[0].children[1].innerText === '0.b',
+        'ul[0][1] innerText remains "0.b" after set'
+      );
+
+      data.two[0].b = '0';
+      test(
+        ul2.children[0].firstElementChild.innerText === '0',
+        'ul[0][0] innerText "0" after set'
+      );
+      test(
+        ul2.children[0].children[1].innerText === '0',
+        'ul[0][1] innerText "0.b" after set'
+      );
+
+      data.two = [];
+      test(ul2.childElementCount === 1, '1 child after empty list set');
+    </script>
+
+    <!-- List of Lists -->
+    <div id="div1">
+      <p sb-mark="three.#">
+        <span sb-mark="three.#.#">placeholder</span>
+      </p>
+    </div>
+
+    <script>
+      data.three = [];
+      data.three.push([]);
+      data.three[0].push(1, 2, 3, 4);
+
+      data.three.push([]);
+      data.three[1].push('a', 'b', 'c', 'd');
+
+      const div1 = document.getElementById('div1');
+      test(div1.childElementCount === 3, 'div1 has 3 children');
+      for (let i in data.three) {
+        for (let j in data.three[i]) {
+          test(
+            div1.children[i].children[j].innerText === String(data.three[i][j]),
+            `div1[${i}][${j}] is ${data.three[i][j]}`
+          );
+        }
+      }
+
+      data.three[0].pop();
+      test(
+        div1.children[0].childElementCount === 4,
+        'div1[0] has 4 children after pop'
+      );
+      test(
+        div1.children[1].childElementCount === 5,
+        'div1[0] still has 5 children'
+      );
+
+      data.three[1] = [];
+      test(
+        div1.children[1].childElementCount === 1,
+        'div1[0] has 1 child after empty list set'
+      );
+
+      data.three.shift();
+      test(div1.childElementCount === 2, 'div1[0] has 2 children after shift');
+
+      data.three.pop();
+      test(div1.childElementCount === 1, 'div1[0] has 1 child after pop');
+    </script>
+  </body>
+</html>

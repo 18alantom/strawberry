@@ -1,6 +1,6 @@
 type Complex = object | Function;
-type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
 type Reactive<T extends any> = T extends Complex ? T & Meta : never;
+type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
 type Watcher = (newValue: unknown) => unknown;
 type Directive = (
   el: Element, // The element to which the directive has been applied.
@@ -8,10 +8,10 @@ type Directive = (
   key: string, // Period '.' delimited key that points to the value in the global data object.
   isDelete: boolean, // Whether the value was deleted `delete data.prop`.
   parent: Reactive<object>, // The parent object to which the value belongs (actual object not its proxy).
-  prop: string // property of the parent which points to the value, `parent[prop] ≈ value`
+  prop: string // Property of the parent which points to the value, `parent[prop] ≈ value`
 ) => unknown;
 type DirectiveMap = Record<string, Directive>;
-type BasicAttrs = 'mark' | 'child' | 'if' | 'plc';
+type BasicAttrs = 'mark' | 'child' | 'if';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -23,6 +23,14 @@ let globalPrefix = 'sb-';
 const attr = (k: BasicAttrs) => globalPrefix + k;
 
 function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
+  if (obj !== null && (typeof obj === 'object' || typeof obj === 'function')) {
+    Object.defineProperty(obj, '__sb_prefix', {
+      value: prefix,
+      enumerable: false,
+      writable: true,
+    });
+  }
+
   if (typeof obj !== 'object' || obj === null) {
     return obj;
   }
@@ -33,11 +41,6 @@ function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
     const value = obj[prop as K];
     obj[prop as K] = reactive(value, newprefix);
   }
-
-  Object.defineProperty(obj, '__sb_prefix', {
-    value: prefix,
-    enumerable: false,
-  });
 
   return new Proxy(obj, ReactivityHandler) as Reactive<T>;
 }
@@ -116,6 +119,22 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     return success;
   }
 
+  static defineProperty(
+    target: Reactive<object>,
+    prop: string | symbol,
+    descriptor: PropertyDescriptor
+  ): boolean {
+    if (
+      prop === '__sb_prefix' &&
+      '__sb_prefix' in target &&
+      /\.\d+$/.test(descriptor.value)
+    ) {
+      return Reflect.set(target, prop, descriptor.value);
+    }
+
+    return Reflect.defineProperty(target, prop, descriptor);
+  }
+
   /**
    * Stores the list of dependencies the computed value is dependent on.
    *
@@ -136,6 +155,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       writable: true,
     });
 
+    const keyset = new Set<string>();
     for (const matches of value.toString().matchAll(dependencyRegex)) {
       const dep = matches[0]?.replace('?.', '.');
       if (!dep) {
@@ -144,6 +164,11 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
       const sidx = dep.indexOf('.') + 1;
       const dkey = dep.slice(sidx);
+
+      if (keyset.has(key + dkey)) {
+        continue;
+      }
+
       let root = dkey;
       if (root.includes('.')) {
         root = root.slice(0, root.indexOf('.'));
@@ -153,6 +178,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
         continue;
       }
 
+      keyset.add(key + dkey);
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value, parent, prop });
       (value as Reactive<Function>).__sb_dependencies = true;
@@ -194,12 +220,12 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     prop: string
   ) {
     if (typeof value === 'function') {
-      value = value();
+      value = reactive(value(), key);
     }
 
     if (value instanceof Promise) {
       (value as Promise<unknown>).then((v: unknown) =>
-        this.update(v, key, false, parent, prop)
+        this.update(reactive(v, key), key, false, parent, prop)
       );
       return;
     }
@@ -224,38 +250,112 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     key: string,
     isDelete: boolean,
     parent: Reactive<object>,
-    prop: string
-  ) {
+    prop: string,
+    searchRoot?: Element | Document,
+    skipUpdateArrayElements?: boolean
+  ): void {
     if (globalDefer) {
       globalDefer.push([value, key, isDelete, parent, prop]);
       return;
     }
 
-    const isArray = Array.isArray(parent);
-    if (isArray && /\d+/.test(prop)) {
-      appendChildNode(parent, prop, value);
+    const isParentArray = Array.isArray(parent);
+    if (isParentArray && /^\d+$/.test(prop) && !skipUpdateArrayElements) {
+      updateArrayItemElement(key, prop, value, parent);
+    } else if (isParentArray && prop === 'length') {
+      sortArrayItemElements(parent);
     }
 
-    if (isArray && prop === 'length') {
-      sortChildNodes(parent);
+    const isRDO = isReactiveObject(value);
+    if (isRDO && Array.isArray(value)) {
+      const placeholderKey = `${key}.#`;
+      const rootQuery = `[${attr('mark')}="${placeholderKey}"]`;
+      const elsArray: Element[][] = [];
+      for (const plc of document.querySelectorAll(rootQuery)) {
+        const els = initializeArrayElements(plc, placeholderKey, value);
+        elsArray.push(els);
+      }
+
+      /**
+       * Set values to the newly initialized elements
+       */
+      for (const els of elsArray) {
+        for (const i in value) {
+          this.callDirectives(
+            value[i],
+            getKey(i, key),
+            isDelete,
+            value,
+            i,
+            els[i],
+            true
+          );
+        }
+      }
+    } else if (isRDO) {
+      for (const k in value) {
+        this.callDirectives(
+          value[k as keyof typeof value],
+          getKey(k, key),
+          isDelete,
+          value,
+          k,
+          searchRoot
+        );
+      }
     }
 
+    if (isRDO) {
+      return;
+    }
+
+    searchRoot ??= document;
     for (const attrSuffix in this.directives) {
+      const attrName = globalPrefix + attrSuffix;
       const directive = this.directives[attrSuffix]!;
-      const els = document.querySelectorAll(
-        `[${globalPrefix + attrSuffix}='${key}']`
-      );
+      const els = searchRoot.querySelectorAll(`[${attrName}='${key}']`);
       els.forEach((el) => directive(el, value, key, isDelete, parent, prop));
+
+      if (
+        searchRoot instanceof Element &&
+        searchRoot.getAttribute(attrName) === key
+      ) {
+        directive(searchRoot, value, key, isDelete, parent, prop);
+      }
     }
   }
 
   static directives: DirectiveMap = {
-    mark,
+    mark: (el, value, _, isDelete) => {
+      if (isDelete) {
+        return remove(el);
+      }
+
+      if (!(el instanceof HTMLElement)) {
+        return;
+      }
+
+      if (typeof value === 'object' && value !== null) {
+        value = JSON.stringify(value);
+      }
+
+      const stringValue = typeof value === 'string' ? value : String(value);
+      el.innerText = stringValue;
+    },
     if: (el, value, key) => {
+      /**
+       * TODO: when taking out of a template, value is taken from
+       * the content, so it should be appended to the content, else
+       * the value will be queriable and is not concealed
+       *
+       * changes:
+       * - const child = el.content.firstElementChild;
+       * - temp.content.appendChild(el.cloneNode)
+       */
       const isshow = Boolean(value);
       const istemplate = el instanceof HTMLTemplateElement;
       if (isshow && istemplate) {
-        const child = el.children[0] ?? el.content.children[0];
+        const child = el.firstElementChild ?? el.content.firstElementChild;
         if (!child) {
           return;
         }
@@ -273,27 +373,322 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   };
 }
 
-// @ts-ignore
-window.rh = ReactivityHandler;
-
-function mark(el: Element, value: unknown, key: string, isDelete: boolean) {
-  if (isDelete) {
-    remove(el);
+/**
+ * @param key prefixed key (eg: "list.3")
+ * @param idx index of the newly pushed element (eg: "3")
+ * @param item array[idx] to prevent repeat get
+ * @param array array into which the value is pushed
+ */
+function updateArrayItemElement(
+  key: string,
+  idx: string,
+  item: unknown,
+  array: Reactive<unknown[]>
+) {
+  /**
+   * Called only when an array element is updated,
+   * i.e. prop is a digit, such as when push, splice, etc are called.
+   *
+   * When an item is pushed to an Array, the DOM element that maps to that
+   * item does not exist.
+   *
+   * This function inserts the child element before the template.
+   */
+  const arrayItems = document.querySelectorAll(`[${attr('mark')}="${key}"]`);
+  if (arrayItems.length && !isReactiveObject(item)) {
+    /**
+     * For primitive items just updating the innerText
+     * suffices, no need to replace the element.
+     */
+    return;
   }
 
-  if (Array.isArray(value)) {
-    return array(el, value, key);
-  } else if (typeof value === 'object' && value !== null) {
-    return object(el, value, key);
+  const prefix = array.__sb_prefix;
+  const placeholderKey = key.replace(/\d+$/, '#');
+  let itemReplaced: boolean = false;
+
+  /**
+   * Loop runs, if the array item already exists so if a value is
+   * "pushed" into an array, this won'd update the element array
+   * because the array item doesn't already exist.
+   */
+  for (const item of arrayItems) {
+    let placeholder = item.nextElementSibling;
+    while (placeholder) {
+      if (placeholder.getAttribute(attr('mark')) === placeholderKey) {
+        break;
+      }
+      placeholder = placeholder.nextElementSibling;
+    }
+
+    let clone: Node | null | undefined;
+    if (placeholder instanceof HTMLTemplateElement) {
+      clone = placeholder.content.firstElementChild?.cloneNode(true);
+    } else if (placeholder?.getAttribute(attr('mark')) === placeholderKey) {
+      /**
+       * possible no-op: unconcealed placeholder should not exist
+       * if the array had elements when the outer function was called
+       */
+      clone = placeholder?.cloneNode(true);
+    } else {
+      continue;
+    }
+
+    if (!(clone instanceof Element)) {
+      continue;
+    }
+
+    initializeClone(idx, prefix, placeholderKey, clone);
+    item.replaceWith(clone);
+    itemReplaced ||= true;
   }
 
-  return text(el, value, key);
+  if (itemReplaced) {
+    return;
+  }
+
+  const templates = document.querySelectorAll(
+    `[${attr('mark')}="${placeholderKey}"]`
+  );
+
+  for (const template of templates) {
+    if (!(template instanceof HTMLTemplateElement)) {
+      continue;
+    }
+
+    const clone = template.content.firstElementChild?.cloneNode(true);
+    if (!(clone instanceof Element)) {
+      continue;
+    }
+
+    initializeClone(idx, prefix, placeholderKey, clone);
+    template.before(clone);
+  }
+}
+
+function sortArrayItemElements(array: Reactive<unknown[]>): void {
+  /**
+   * Called only when length prop of an array is set.
+   *
+   * Length is the last property to be set after an array shape
+   * has been altered by using methods such as push, splice, etc.
+   *
+   * This sorts the DOM nodes to match the data array since updates
+   * (get, set sequence) don't always happen in the right order such as
+   * when using splice. So sorting must take place after the update.
+   */
+  const templateKey = getKey('#', array.__sb_prefix);
+  const templates = document.querySelectorAll(
+    `[${attr('mark')}="${templateKey}"]`
+  );
+
+  for (const template of templates) {
+    const items: Element[] = [];
+
+    /**
+     * populate the items array with item elements
+     * items array is populated in the reverse order
+     */
+    let prev = template.previousElementSibling;
+    let isSorted = true;
+    let lastIdx: number = -1;
+    while (prev) {
+      const curr = prev;
+      prev = curr.previousElementSibling;
+
+      const key = curr?.getAttribute(attr('mark'));
+      if (!key) {
+        continue;
+      }
+
+      if (key === templateKey) {
+        break;
+      }
+
+      if (key.replace(/\d+$/, '#') === templateKey) {
+        items.push(curr);
+        if (!isSorted) {
+          continue;
+        }
+
+        const idx = Number(key.slice(key.lastIndexOf('.') + 1) ?? -1);
+        if (lastIdx !== -1 && lastIdx !== idx + 1) {
+          isSorted = false;
+        }
+        lastIdx = idx;
+      }
+    }
+
+    if (isSorted) {
+      return;
+    }
+
+    /**
+     * reverse the unsorted array to get it in the same order
+     * as the DOM, and create a sortedArray.
+     */
+    const sortedItems = [...items].sort((a, b) => {
+      const am = a.getAttribute(attr('mark'));
+      const bm = b.getAttribute(attr('mark'));
+      if (!am || !bm) {
+        return 0;
+      }
+
+      const ams = am.split('.');
+      const bms = bm.split('.');
+
+      const amIdx = +(ams[ams.length - 1] ?? 0);
+      const bmIdx = +(bms[bms.length - 1] ?? 0);
+
+      return amIdx - bmIdx;
+    });
+
+    /**
+     * Replace the unsorted items by the sorted items.
+     */
+    sortedItems.forEach((item) => template.before(item));
+  }
+}
+
+function initializeArrayElements(
+  plc: Element,
+  placeholderKey: string,
+  array: unknown[]
+): Element[] {
+  /**
+   * 1. Delete Previous Array Elements
+   *
+   * When a new list is set previous list item elements should be
+   * deleted. Empty list deletes all items, but keeps the placeholder.
+   *
+   * When a array is updated a child element is prepended before the
+   * placeholder element.
+   */
+  let prev = plc.previousElementSibling;
+  while (prev) {
+    const curr = prev;
+    prev = curr.previousElementSibling;
+
+    const key = curr?.getAttribute(attr('mark'));
+    if (!key) {
+      continue;
+    }
+
+    if (key !== placeholderKey && key.replace(/\d+$/, '#') === placeholderKey) {
+      curr?.remove();
+    } else {
+      break;
+    }
+  }
+
+  /**
+   * 2. Get Placeholder and Template from `plc`
+   *
+   * `plc` can be either a concealed element,
+   * i.e. the `template`:
+   * ```html
+   * <template sb-mark="list.#">
+   *   <!-- ONLY one child -->
+   *   <li></li>
+   * </template>
+   * ```
+   * Or a rendered element, i.e. the `placeholder`:
+   * ```html
+   * <li sb-mark="list.#">zero</li>
+   * ```
+   *
+   * `template` is maintained at the end of a list
+   * of elements and contains the `placeholder`.
+   *
+   * `placeholder` is cloned to create list elements.
+   */
+  let template: HTMLTemplateElement;
+  let placeholder: Element | null;
+  if (plc instanceof HTMLTemplateElement) {
+    template = plc;
+    placeholder = plc.content.firstElementChild;
+    placeholder?.setAttribute(attr('mark'), placeholderKey);
+  } else {
+    placeholder = plc;
+    template = document.createElement('template');
+    template.content.appendChild(plc.cloneNode(true));
+    template.setAttribute(attr('mark'), placeholderKey);
+    plc.replaceWith(template);
+  }
+
+  if (placeholder === null) {
+    console.warn(`empty template found for ${placeholderKey}`);
+    return [];
+  }
+
+  /**
+   * For each array item, insert a child element before the
+   * template
+   */
+  const prefix = placeholderKey.slice(0, -2); // remove '.#' loop indicator
+  const arrayElements: Element[] = [];
+  for (const idx in array) {
+    if (Number.isNaN(+idx)) {
+      continue;
+    }
+
+    const clone = placeholder.cloneNode(true);
+    if (!(clone instanceof Element)) {
+      continue;
+    }
+
+    initializeClone(idx, prefix, placeholderKey, clone);
+    template.before(clone);
+    arrayElements.push(clone);
+  }
+
+  return arrayElements;
+}
+
+/**
+ * @param idx index of `item` in `array` eg: "0"
+ * @param prefix item element key prefix i.e. placholder key without ".#"
+ * @param placeholderKey key set on the placeholder element eg: "list.#"
+ * @param clone clone of the placeholder item
+ */
+function initializeClone(
+  idx: string,
+  prefix: string,
+  placeholderKey: string,
+  clone: Element
+): void {
+  const key = getKey(idx, prefix);
+
+  /**
+   * Change directive keys from placeholder keys
+   * eg `"users.#.name"` to actual keys eg `"users.0.name"`
+   */
+  for (const attrSuffix in ReactivityHandler.directives) {
+    const attrName = globalPrefix + attrSuffix;
+    /**
+     * Change clone's directive keys
+     */
+    if (clone.getAttribute(attrName) === placeholderKey) {
+      clone.setAttribute(attrName, key);
+    }
+
+    /**
+     * Change clone's chilren's directive keys
+     */
+    clone.querySelectorAll(`[${attrName}]`).forEach((ch) => {
+      const pkey = ch.getAttribute(attrName);
+      if (pkey?.startsWith(placeholderKey)) {
+        const newPkey = key + pkey.slice(placeholderKey.length);
+        ch.setAttribute(attr('mark'), newPkey);
+      }
+    });
+  }
 }
 
 function remove(el: Element) {
-  const isPlc = el.getAttribute(attr('plc')) === '1';
   const parent = el.parentElement;
-  if (!isPlc || !(el instanceof HTMLElement) || !parent) {
+
+  if (!(el instanceof HTMLElement) || !parent) {
     return el.remove();
   }
 
@@ -304,147 +699,12 @@ function remove(el: Element) {
   el.remove();
 }
 
-function text(el: Element, value: unknown, key: string) {
-  if (el instanceof HTMLElement && value !== undefined) {
-    el.innerText = `${value}`;
-  }
-  el.setAttribute(attr('mark'), key);
-}
-
-function array(el: Element, value: unknown[], key: string) {
-  const childTag = el.getAttribute(attr('child'));
-  if (!childTag) {
-    console.warn('marked el with array value has no child', value, el, key);
-    return;
+function isReactiveObject(value: unknown): value is Reactive<object> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
   }
 
-  const children = value.map((item, i) =>
-    getChild(childTag, getKey(String(i), key), item)
-  );
-
-  el.setAttribute(attr('mark'), key);
-  el.replaceChildren(...children);
-}
-
-function appendChildNode(
-  target: Reactive<unknown[]>,
-  prop: string,
-  value: unknown
-) {
-  /**
-   * Called only when an array element is updated,
-   * i.e. prop is a digit, such as when push, splice, etc are called.
-   *
-   * When an item is pushed to an Array, the DOM element that maps to that
-   * item does not exist.
-   *
-   * This function appends a child for the pushed item.
-   */
-  const prefix = target.__sb_prefix;
-  const els = document.querySelectorAll(`[${attr('mark')}="${prefix}"]`);
-
-  const key = getKey(prop, prefix);
-  for (const el of els) {
-    const ch = el.querySelector(`[${attr('mark')}="${key}"]`);
-    if (ch !== null) {
-      continue;
-    }
-
-    const childTag = el.getAttribute(attr('child'));
-    if (!childTag) {
-      continue;
-    }
-
-    const child = getChild(childTag, key, value);
-    el.appendChild(child);
-  }
-}
-
-function sortChildNodes(target: Reactive<unknown[]>) {
-  /**
-   * Called only when length prop of an array is set.
-   *
-   * Length is the last property to be set after an array shape
-   * has been altered by using methods such as push, splice, etc.
-   *
-   * This sorts the DOM nodes to match the data array since updates
-   * (get, set sequence) don't always happen in the right order such
-   * when using splice. So the sorting must take place after the update.
-   */
-  const prefix = target.__sb_prefix;
-  const els = document.querySelectorAll(`[${attr('mark')}="${prefix}"]`);
-  for (const el of els) {
-    const children = [...el.children];
-    children
-      .sort((a, b) => {
-        const am = a.getAttribute(attr('mark'));
-        const bm = b.getAttribute(attr('mark'));
-        if (!am || !bm) {
-          return 0;
-        }
-
-        const ams = am.split('.');
-        const bms = bm.split('.');
-
-        const amIdx = +(ams[ams.length - 1] ?? 0);
-        const bmIdx = +(bms[bms.length - 1] ?? 0);
-
-        return amIdx - bmIdx;
-      })
-      .forEach((ch) => el.appendChild(ch));
-  }
-}
-
-function object(el: Element, value: object, key: string) {
-  const childTag = el.getAttribute(attr('child'));
-  if (!childTag) {
-    return setSlots(el, key, value);
-  }
-
-  const child = getChild(childTag, key, value);
-  child.setAttribute(attr('mark'), key);
-  el.replaceWith(child);
-}
-
-function getChild(tag: string, prefix: string, value: unknown): HTMLElement {
-  const el = document.createElement(tag);
-  setSlots(el, prefix, value);
-  return el;
-}
-
-function setSlots(el: Element, prefix: string, value: unknown): void {
-  const slots = el.shadowRoot?.querySelectorAll('slot');
-  if (!slots?.length) {
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      value = undefined;
-    }
-
-    return mark(el, value, prefix, false);
-  }
-
-  el.replaceChildren();
-  for (const slot of slots) {
-    const childTag = slot.getAttribute(attr('child'));
-    const childEl = document.createElement(childTag ?? 'span');
-
-    let childVal = value;
-    let childKey = prefix;
-
-    const sname = slot.getAttribute('name');
-    if (sname) {
-      childVal = (value as Record<string, unknown>)?.[sname];
-      childKey = getKey(sname, prefix);
-      childEl.setAttribute('slot', sname);
-    }
-
-    if (!childTag) {
-      childEl.setAttribute(attr('plc'), '1');
-    }
-
-    mark(childEl, childVal, childKey, false);
-    el.appendChild(childEl);
-  }
-  el.setAttribute(attr('mark'), prefix);
+  return '__sb_prefix' in value;
 }
 
 function getKey(prop: string, prefix: string) {
@@ -517,7 +777,7 @@ function readyStateChangeHandler() {
   }
 }
 
-export function executeDefered() {
+function executeDefered() {
   const deferQueue = globalDefer ?? [];
   globalDefer = null; // Needs to be set before calling directives else recursion
   deferQueue.forEach((params) => ReactivityHandler.callDirectives(...params));
@@ -586,7 +846,6 @@ export async function load(files: string | string[]) {
  *         </template>`);
  *    ```
  */
-
 export function register(root: string[], ...args: unknown[]): void;
 export function register(root: HTMLElement): void;
 export function register(template: string): void;
@@ -614,7 +873,7 @@ function registerTemplates(rootElement?: HTMLElement) {
 
 function stitchTemplate(arr: string[], ...args: unknown[]): string {
   let stitched: string = arr[0] ?? '';
-  for (let i = 1, length = arr.length; i < length; i++) {
+  for (let i = 1; i < arr.length; i++) {
     stitched += args[i - 1];
     stitched += arr[i];
   }
@@ -698,18 +957,14 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [ ] Buffer updates during load
+- [ ] Handling Computed
+  - [ ] Update handling of computed, reference to  "this"  i.e. parent obj?
+  - [ ] Cache computed
 - [?] Change use of Records to Map (execution order of watchers, directives, computed)
-- [ ] Cache computed?
-- [ ] Check array changes: shift, unshift, reverse
-- [ ] cannot redefine property __sb_prefix
-- [ ] sync[node]: refresh UI, such as after page load
-- [ ] walk sub-trees and cross check values and marks
-- [ ] Initialization: values are set after page loads
-- [ ] Update Subtree after display
-- [ ] Sync newly inserted nodes with other directives
 - [ ] Review the code, take note of implementation and hacks
+- [ ] DOM Thrashing?
 - [^] Cache el references? (might not be required, 10ms for 1_000_000 divs querySelectorAll)
+- [x] Buffer updates during load
 - [x] Remove the need for `sb.register`
 - [x] Update sb register so that this can be done:
      ```
@@ -718,50 +973,72 @@ TODO:
       - [x] sb.register('new-p', `<p><slot/></p>`);
      ```
 
-Priority
-- [x] Sync Tree
-- [ ] Buffer DOM Updates when loading using a Defer Queue.
-- [ ] Nested lists.
-- [ ] Check Speed:
-  - [ ] Cache Computed values until dependencies update.
-  - [ ] Cache Element refereneces.
 
-Ideally one should be able to init strawberry in the head element
-set properties to `data.prop = value` in script tags in the 
-loading readyState
-
-For DOMUpdates if readyState is loading then updates to the dom
-can be pushed to the defer queue and then flushed when ready state changes
-to interactive
-
-And this all should be set using DOMContentLoaded.
-  
-
-  
 How to Handle Nested Lists or Nested Objects?
 
-One solution is, instead of mentioning sb-child for the child, such as this:
-```html
-  <div sb-mark="list" sb-child="plum-p"></div>
-```
-Keep the child inside the element
-
-```html
-  <div sb-mark="list">
-    <plum-p></plum-p>
-  </div>
-``` 
-Maybe add an sb-child to explicitly mark the the element as a child.
-
-```html
-  <div sb-mark="list">
-    <plum-p sb-child></plum-p>
-  </div>
-``` 
 
 # Notes
 
 TODO: Move these elsewhere maybe
+
+## Nesting and Looping
+
+For iteratinge over an array and placing elements based on the items placeholder
+keys are used. Placeholder keys are keys with '#' in them. Each '#' represents an
+array to be iterated on.
+
+A simple example:
+
+```html
+<ul>
+  <li sb-mark="list.#"></li>
+</ul>
+
+<script>
+  data.list = ['one', 'two'];
+</script>
+```
+
+this will result in the following HTML
+
+```html
+<ul>
+  <li sb-mark="list.0">one</li>
+  <li sb-mark="list.1">two</li>
+</ul>
+```
+
+Lists can be nested like so:
+
+```html
+<div>
+  <p sb-mark="lines.#">
+    <span sb-mark="lines.#.#"></span>
+  </p>
+<div>
+
+<script>
+  data.lines = [['Hello', 'World!'], ['Bonjour', 'Monde!']];
+</script>
+```
+
+Or you can use objects in lists like so:
+
+```html
+<div sb-mark="friends.#">
+  <p sb-mark="friends.#.name"></p>
+</div>
+
+<script>
+  data.friends = [{name: 'G'}]
+</script>
+```
+
+A few details on lists: 
+- lists can't be delete, to empty an array set an empty array to the element
+- deleting array items will lead to keys with incorrect sequences
+- use splice, pop, or shift to delete array items
+
 
 ## UI Update Defer
 
