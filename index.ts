@@ -457,7 +457,7 @@ function updateArrayItemElement(
   }
 }
 
-function sortArrayItemElements(array: Reactive<unknown[]>) {
+function sortArrayItemElements(array: Reactive<unknown[]>): void {
   /**
    * Called only when length prop of an array is set.
    *
@@ -468,18 +468,21 @@ function sortArrayItemElements(array: Reactive<unknown[]>) {
    * (get, set sequence) don't always happen in the right order such as
    * when using splice. So sorting must take place after the update.
    */
-  const placeholderKey = getKey('#', array.__sb_prefix);
-  const placeholders = document.querySelectorAll(
-    `[${attr('mark')}="${placeholderKey}"]`
+  const templateKey = getKey('#', array.__sb_prefix);
+  const templates = document.querySelectorAll(
+    `[${attr('mark')}="${templateKey}"]`
   );
-  for (const plc of placeholders) {
+
+  for (const template of templates) {
     const items: Element[] = [];
 
     /**
      * populate the items array with item elements
      * items array is populated in the reverse order
      */
-    let prev = plc.previousElementSibling;
+    let prev = template.previousElementSibling;
+    let isSorted = true;
+    let lastIdx: number = -1;
     while (prev) {
       const curr = prev;
       prev = curr.previousElementSibling;
@@ -489,20 +492,32 @@ function sortArrayItemElements(array: Reactive<unknown[]>) {
         continue;
       }
 
-      if (key === placeholderKey) {
+      if (key === templateKey) {
         break;
       }
 
-      if (key.replace(/\d+$/, '#') === placeholderKey) {
+      if (key.replace(/\d+$/, '#') === templateKey) {
         items.push(curr);
+        if (!isSorted) {
+          continue;
+        }
+
+        const idx = Number(key.slice(key.lastIndexOf('.') + 1) ?? -1);
+        if (lastIdx !== -1 && lastIdx !== idx + 1) {
+          isSorted = false;
+        }
+        lastIdx = idx;
       }
+    }
+
+    if (isSorted) {
+      return;
     }
 
     /**
      * reverse the unsorted array to get it in the same order
      * as the DOM, and create a sortedArray.
      */
-    items.reverse();
     const sortedItems = [...items].sort((a, b) => {
       const am = a.getAttribute(attr('mark'));
       const bm = b.getAttribute(attr('mark'));
@@ -522,15 +537,7 @@ function sortArrayItemElements(array: Reactive<unknown[]>) {
     /**
      * Replace the unsorted items by the sorted items.
      */
-    for (const idx in items) {
-      const unsorted = items[idx];
-      const sorted = sortedItems[idx];
-      if (!sorted || !unsorted) {
-        continue;
-      }
-
-      unsorted?.replaceWith(sorted);
-    }
+    sortedItems.forEach((item) => template.before(item));
   }
 }
 
