@@ -248,6 +248,8 @@ and Failures are printed in the console.
 
 See [`test.html`](https://github.com/18alantom/strawberry/blob/main/tests/test.html) for an example.
 
+To see all tests in one place, open `test/index.html`.
+
 ---
 
 ## Douglas Crockford on the XML of today

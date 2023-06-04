@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Strawberry - Test</title>
+    <title>Sb Test - General</title>
     <script src="../index.js"></script>
     <link rel="stylesheet" href="test.css" />
     <script src="./test.js"></script>
@@ -16,7 +16,7 @@
   </template>
   <body>
     <main>
-      <h1>Sb - General Test</h1>
+      <h1>General Tests</h1>
       <div>
         <p>Success: <span id="success">0</span></p>
         <p>Failure: <span id="failure">0</span></p>
@@ -206,13 +206,15 @@
       delete data.a;
     </script>
 
-    <div id="l1" sb-mark="l1" sb-child="red-p"></div>
+    <div id="l1">
+      <red-p sb-mark="l1.#"></red-p>
+    </div>
     <script>
       const l1 = document.getElementById('l1');
-      test(l1.childElementCount === 0, 'div#l1 has no children');
+      test(l1.childElementCount === 1, 'div#l1 has one child');
 
       data.l1 = ['a'];
-      test(l1.childElementCount === 1, 'div#l1 has one child');
+      test(l1.childElementCount === 2, 'div#l1 has two children');
       test(l1.children[0]?.innerText === 'a', 'div#l1 child 0 is a');
       test(
         l1.children[0]?.tagName.toLowerCase() === 'red-p',
@@ -220,32 +222,38 @@
       );
 
       data.l1.push('b');
-      test(l1.childElementCount === 2, 'div#l1 has two children');
+      test(l1.childElementCount === 3, 'div#l1 has three children');
       test(l1.children[1]?.innerText === 'b', 'div#l1 child 1 is b');
 
       data.l1.pop();
-      test(l1.childElementCount === 1, 'div#l1 one child removed');
+      test(l1.childElementCount === 2, 'div#l1 one child removed');
       test(l1.children[0]?.innerText === 'a', 'div#l1 child 0 is a');
 
       const ch0 = l1.children[0];
       data.l1 = ['a'];
       test(ch0 !== l1.children[0], 'div#l1 children replaced');
-
-      delete data.l1;
-      test(!l1.isConnected, 'div#l1 deleted');
+      data.l1 = [];
+      test(
+        l1.children[0] instanceof HTMLTemplateElement,
+        'div#l1 has template child'
+      );
     </script>
 
     <template name="div-user">
       <div>
-        <h1><slot name="name" />notset</h1>
-        <p><slot name="age" />notset</p>
+        <h1><slot name="name" /></h1>
+        <p><slot name="age" /></p>
       </div>
     </template>
     <script>
       sb.register();
     </script>
 
-    <div-user id="du1" sb-mark="user"></div-user>
+    <!-- user mark applied for deletion -->
+    <div-user id="du1" sb-mark="user">
+      <span slot="name" sb-mark="user.name"></span>
+      <span slot="age" sb-mark="user.age"></span>
+    </div-user>
     <script>
       const du1 = document.getElementById('du1');
       const du1div = du1.shadowRoot.children[0];
@@ -253,18 +261,18 @@
 
       const du1h1 = du1div.children[0];
       test(du1h1 instanceof HTMLHeadingElement, 'el#du1 has a h# element');
-      test(du1h1.innerText === 'notset', 'el#du1>h1 content is placeholder');
 
       const du1p = du1div.children[1];
       test(du1p instanceof HTMLParagraphElement, 'el#du1 has a p element');
-      test(du1p.innerText === 'notset', 'el#du1>p content is placeholder');
       test(
-        document.querySelector('[sb-mark="user.name"]') === null,
-        'user.name not set'
+        document.querySelector('[sb-mark="user.name"]') instanceof
+          HTMLSpanElement,
+        'user.name el is a span'
       );
       test(
-        document.querySelector('[sb-mark="user.age"]') === null,
-        'user.age not set'
+        document.querySelector('[sb-mark="user.age"]') instanceof
+          HTMLSpanElement,
+        'user.age el is a span'
       );
 
       data.user = {};
@@ -290,28 +298,29 @@
 
       data.user = { name: 'TEST', age: 55 };
       test(du1.isConnected, 'el#du1 still connected after reassign');
-      test(du1.children.length === 2, 'el#du1 has two children after reset');
+      test(du1.children.length === 1, 'el#du1 has only one child after reset');
       test(
         du1.children[0].innerText === 'TEST',
         'new user.name span has updated text'
-      );
-      test(
-        du1.children[1].innerText === '55',
-        'new user.age span has updated text'
       );
 
       delete data.user;
       test(!du1.isConnected, 'el#du1 disconnected after user delete');
     </script>
 
-    <div sb-mark="users" sb-child="div-user" id="d1"></div>
+    <div id="d1">
+      <div-user sb-mark="users.#">
+        <span slot="name" sb-mark="users.#.name"></span>
+        <span slot="age" sb-mark="users.#.age"></span>
+      </div-user>
+    </div>
     <script>
       const d1 = document.getElementById('d1');
       data.users = [];
-      test(d1.children.length === 0, 'el#d1 has no children');
+      test(d1.children.length === 1, 'el#d1 has one child');
 
       data.users.push({ name: 'A', age: 1 });
-      test(d1.children.length === 1, 'el#d1 has one child');
+      test(d1.children.length === 2, 'el#d1 has two children');
       test(
         d1.children[0].children[0].innerText === 'A',
         'el#d1[0][0] innerText is A'
@@ -322,7 +331,7 @@
       );
 
       data.users.push({ name: 'B', age: 2 });
-      test(d1.children.length === 2, 'el#d1 has two children');
+      test(d1.children.length === 3, 'el#d1 has three children');
       test(
         d1.children[0].children[0].innerText === 'A',
         'el#d1[0][0] innerText is still A'
@@ -339,37 +348,43 @@
         d1.children[1].children[1].innerText === '2',
         'el#d1[1][1] innerText is 1'
       );
-      delete data.users;
+      data.users = [];
     </script>
 
     <template name="inv-item">
-      <slot name="name" />
+      <p>
+        <slot name="name"></slot>
+      </p>
     </template>
+
     <script>
       sb.register();
     </script>
-    <div id="inv-items" sb-mark="items" sb-child="inv-item"></div>
+
+    <div id="inv-items">
+      <inv-item sb-mark="items.#">
+        <span slot="name" sb-mark="items.#.name"></span>
+      </inv-item>
+    </div>
+
     <script>
       const items = document.getElementById('inv-items');
       data.qtys = {};
+
       data.items = () =>
         Object.keys(data.qtys).map((name) => ({
           name,
           quantity: data.qtys[name],
         }));
 
-      test(items.children.length === 0, 'el#inv-items has no children');
+      test(items.children.length === 1, 'el#inv-items has one child');
       data.qtys['item'] = 0;
-      test(items.children.length === 1, 'el#inv-items has 1 child');
-      test(items.children[0].innerText === 'item', 'el#inv-items has correct innertext');
-      delete data.items;
-      delete data.qtys;
+
+      test(items.children.length === 2, 'el#inv-items has 1 child');
+      test(
+        items.children[0].innerText === 'item',
+        'el#inv-items has correct innerText'
+      );
     </script>
   </body>
-  <!-- 
-    TODO: Tests
-    - [ ] Custom Handlers
-    - [ ] Custom Prefix
-    - [ ] Nested Components, with inner mark and update
-   -->
 </html>

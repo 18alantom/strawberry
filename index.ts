@@ -23,6 +23,14 @@ let globalPrefix = 'sb-';
 const attr = (k: BasicAttrs) => globalPrefix + k;
 
 function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
+  if (obj !== null && (typeof obj === 'object' || typeof obj === 'function')) {
+    Object.defineProperty(obj, '__sb_prefix', {
+      value: prefix,
+      enumerable: false,
+      writable: true,
+    });
+  }
+
   if (typeof obj !== 'object' || obj === null) {
     return obj;
   }
@@ -33,12 +41,6 @@ function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
     const value = obj[prop as K];
     obj[prop as K] = reactive(value, newprefix);
   }
-
-  Object.defineProperty(obj, '__sb_prefix', {
-    value: prefix,
-    enumerable: false,
-    writable: true,
-  });
 
   return new Proxy(obj, ReactivityHandler) as Reactive<T>;
 }
@@ -153,6 +155,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       writable: true,
     });
 
+    const keyset = new Set<string>();
     for (const matches of value.toString().matchAll(dependencyRegex)) {
       const dep = matches[0]?.replace('?.', '.');
       if (!dep) {
@@ -161,6 +164,11 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
       const sidx = dep.indexOf('.') + 1;
       const dkey = dep.slice(sidx);
+
+      if (keyset.has(key + dkey)) {
+        continue;
+      }
+
       let root = dkey;
       if (root.includes('.')) {
         root = root.slice(0, root.indexOf('.'));
@@ -170,6 +178,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
         continue;
       }
 
+      keyset.add(key + dkey);
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value, parent, prop });
       (value as Reactive<Function>).__sb_dependencies = true;
@@ -211,12 +220,12 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     prop: string
   ) {
     if (typeof value === 'function') {
-      value = value();
+      value = reactive(value(), key);
     }
 
     if (value instanceof Promise) {
       (value as Promise<unknown>).then((v: unknown) =>
-        this.update(v, key, false, parent, prop)
+        this.update(reactive(v, key), key, false, parent, prop)
       );
       return;
     }
@@ -544,7 +553,7 @@ function sortArrayItemElements(array: Reactive<unknown[]>): void {
 function initializeArrayElements(
   plc: Element,
   placeholderKey: string,
-  array: Reactive<unknown[]>
+  array: unknown[]
 ): Element[] {
   /**
    * 1. Delete Previous Array Elements
@@ -948,21 +957,10 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [ ] Looping
-  - [ ] Refactor DRY parts in setChildren and getArrayChild
-  - [ ] Handle when immediate child is not sb-marked
-  - [x] Handle append child
-  - [x] Delete items from placeholder map when removed
-  - [ ] Handle slotted templates
+- [ ] Handling Computed
+  - [ ] Update handling of computed, reference to  "this"  i.e. parent obj?
+  - [ ] Cache computed
 - [?] Change use of Records to Map (execution order of watchers, directives, computed)
-- [ ] Cache computed?
-- [ ] Check array changes: shift, unshift, reverse
-- [ ] cannot redefine property __sb_prefix
-- [ ] sync[node]: refresh UI, such as after page load
-- [ ] walk sub-trees and cross check values and marks
-- [ ] Initialization: values are set after page loads
-- [ ] Update Subtree after display
-- [ ] Sync newly inserted nodes with other directives
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
 - [^] Cache el references? (might not be required, 10ms for 1_000_000 divs querySelectorAll)
@@ -978,66 +976,6 @@ TODO:
 
 How to Handle Nested Lists or Nested Objects?
 
-One solution is, instead of mentioning sb-child for the child, such as this:
-```html
-  <div sb-mark="list" sb-child="plum-p"></div>
-```
-Keep the child inside the element
-
-```html
-  <div sb-mark="list">
-    <plum-p></plum-p>
-  </div>
-``` 
-Maybe add an sb-child to explicitly mark the the element as a child.
-
-```html
-  <div sb-mark="list">
-    <plum-p sb-child></plum-p>
-  </div>
-``` 
-
-Another solution is to complete get rid of `sb-child` and use `sb-mark`
-with `#` to indicate that the element belongs to a child.
-  
-Example with lists:
-  
-```html
-<div sb-mark="list">
-  <plum-p sb-mark="list.#"></plum-p>
-</div>
-```
-
-example with objects:
-
-```html
-<div sb-mark="user">
-  <h1 sb-mark="user.name"></h1>
-  <p sb-mark="user.email"></p>
-</div>
-
-<!-- list of objects -->
-<div sb-mark="users">
-  <div sb-mark="users.#">
-    <h1 sb-mark="users.#.name"></h1>
-    <p sb-mark="users.#.email"></p>
-  </div>
-</div>
-
-<!-- or -->
-<div sb-mark="users">
-  <div sb-mark="#">
-    <h1 sb-mark="name"></h1>
-    <p sb-mark="email"></p>
-  </div>
-</div>
-```
-
-`sb-child` can still be used, but if `sb-child` is not mentioned then
-the list or object mapped UI elements inner child is fetched. And a
-reference to them is stored on the basis of name.
-
-type TemplateMap = Map<HTMLElement, Record<key, Element>>
 
 # Notes
 
@@ -1045,8 +983,62 @@ TODO: Move these elsewhere maybe
 
 ## Nesting and Looping
 
-When nesting, the key used should be `in` the object. With the exception of `'#'` 
-which is used for looping
+For iteratinge over an array and placing elements based on the items placeholder
+keys are used. Placeholder keys are keys with '#' in them. Each '#' represents an
+array to be iterated on.
+
+A simple example:
+
+```html
+<ul>
+  <li sb-mark="list.#"></li>
+</ul>
+
+<script>
+  data.list = ['one', 'two'];
+</script>
+```
+
+this will result in the following HTML
+
+```html
+<ul>
+  <li sb-mark="list.0">one</li>
+  <li sb-mark="list.1">two</li>
+</ul>
+```
+
+Lists can be nested like so:
+
+```html
+<div>
+  <p sb-mark="lines.#">
+    <span sb-mark="lines.#.#"></span>
+  </p>
+<div>
+
+<script>
+  data.lines = [['Hello', 'World!'], ['Bonjour', 'Monde!']];
+</script>
+```
+
+Or you can use objects in lists like so:
+
+```html
+<div sb-mark="friends.#">
+  <p sb-mark="friends.#.name"></p>
+</div>
+
+<script>
+  data.friends = [{name: 'G'}]
+</script>
+```
+
+A few details on lists: 
+- lists can't be delete, to empty an array set an empty array to the element
+- deleting array items will lead to keys with incorrect sequences
+- use splice, pop, or shift to delete array items
+
 
 ## UI Update Defer
 

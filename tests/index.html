@@ -1,0 +1,58 @@
+<style>
+  html {
+    background-color: black;
+    font-family: sans-serif;
+    padding: 1rem;
+  }
+
+  a {
+    font-size: 1.5rem;
+    text-transform: capitalize;
+    margin-bottom: 0.5rem;
+    text-decoration: none;
+    color: lightcoral;
+  }
+
+  a:after {
+    content: ' →';
+  }
+
+  a:visited {
+    color: lightcoral;
+  }
+
+  iframe {
+    border: 1px solid lightblue;
+    width: calc(300px + 2rem + 6px);
+    height: calc(128px + 2rem + 6px);
+  }
+
+  section {
+    display: flex;
+    flex-direction: column;
+  }
+</style>
+<div style="display: flex; flex-wrap: wrap; gap: 2rem">
+  <section>
+    <a href="./test.html">general</a>
+    <iframe src="./test.html"></iframe>
+  </section>
+  <section>
+    <a href="./test.templates.html">templates</a>
+    <iframe src="./test.templates.html"></iframe>
+  </section>
+  <section>
+    <a href="./test.loops.html">loops</a>
+    <iframe src="./test.loops.html"></iframe>
+  </section>
+  <section>
+    <a href="./test.defer.html">defer</a>
+    <iframe src="./test.defer.html"></iframe>
+  </section>
+</div>
+<!-- 
+TODO: Tests:
+- [ ] Custom Handlers
+- [ ] Custom Prefix
+- [ ] Template and Loop tests
+ -->

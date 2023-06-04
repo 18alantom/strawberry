@@ -22,7 +22,7 @@ main > div {
 
 main {
   border: 3px solid rgb(219, 126, 155);
-  width: fit-content;
+  width: 300px;
   margin: 1rem;
 }
 
