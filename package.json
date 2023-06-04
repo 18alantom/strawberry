@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "dev": "esbuild ./index.ts --bundle --format=iife --global-name=sb --watch --outfile=index.js",
-    "build": "./dist.sh",
-    "pub": "tsc && yarn build && yarn publish --access public && ./postpub.sh"
+    "dist": "./dist.sh",
+    "pub": "tsc && yarn dist && yarn publish --access public && ./postpub.sh"
   },
   "devDependencies": {
     "esbuild": "^0.17.15",
