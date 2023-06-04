@@ -619,6 +619,10 @@ function initializeArrayElements(
   const prefix = placeholderKey.slice(0, -2); // remove '.#' loop indicator
   const arrayElements: Element[] = [];
   for (const idx in array) {
+    if (Number.isNaN(+idx)) {
+      continue;
+    }
+
     const clone = placeholder.cloneNode(true);
     if (!(clone instanceof Element)) {
       continue;
