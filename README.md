@@ -139,7 +139,9 @@ is set.
 of the `li` are set from the list items.
 
 ```html
-<ul sb-mark="list" sb-child="li"></ul>
+<ul>
+  <li sb-mark="list.#"></li>
+</ul>
 
 <script>
   data.list = ['Strawberry', 'Mulberry', 'Raspberry'];
@@ -191,12 +193,11 @@ of the `li` are set from the list items.
   </div>
 </template>
 
-<script>
-  const data = sb.init();
-</script>
-
 <body>
-  <user-div sb-mark="user"></user-div>
+  <user-div>
+    <span slot="name" sb-mark="user.name"></span>
+    <span slot="age" sb-mark="user.age"></span>
+  </user-div>
 </body>
 
 <script>
