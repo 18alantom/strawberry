@@ -263,7 +263,7 @@ To see all tests in one place, open `test/index.html`.
 The website has two dependencies required to run, `sb.min.js` and
 `highlight.min.js` for running strawberry in the example and highlighting all the code.
 
-You can run the `pubwebsite.sh` script which downloads these files:
+You can run the [`pubwebsite.sh`](https://github.com/18alantom/strawberry/blob/main/pubwebsite.sh) script which downloads these files:
 
 ```bash
 ./pubwebsite.sh
@@ -276,7 +276,7 @@ $ Publish the website? [y/n]: n
 $ /Users/you/Desktop/projects/strawberry
 ```
 
-After the script has run, `website/index.html` should render as expected.
+After the script has run, [`website/index.html`](https://github.com/18alantom/strawberry/blob/main/website/index.html) should render as expected.
 
 ---
 
