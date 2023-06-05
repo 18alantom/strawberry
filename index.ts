@@ -343,19 +343,10 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       el.innerText = stringValue;
     },
     if: (el, value, key) => {
-      /**
-       * TODO: when taking out of a template, value is taken from
-       * the content, so it should be appended to the content, else
-       * the value will be queriable and is not concealed
-       *
-       * changes:
-       * - const child = el.content.firstElementChild;
-       * - temp.content.appendChild(el.cloneNode)
-       */
       const isshow = Boolean(value);
       const istemplate = el instanceof HTMLTemplateElement;
       if (isshow && istemplate) {
-        const child = el.firstElementChild ?? el.content.firstElementChild;
+        const child = el.content.firstElementChild;
         if (!child) {
           return;
         }
@@ -365,7 +356,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
 
       if (!isshow && !istemplate) {
         const temp = document.createElement('template');
-        temp.appendChild(el.cloneNode(true));
+        temp.content.appendChild(el.cloneNode(true));
         temp.setAttribute(attr('if'), key);
         el.replaceWith(temp);
       }
@@ -960,6 +951,8 @@ TODO:
 - [ ] Handling Computed
   - [ ] Update handling of computed, reference to  "this"  i.e. parent obj?
   - [ ] Cache computed
+- [ ] sb-if usage with sb-mark
+- [ ] Remove need to apply names on slot elements
 - [?] Change use of Records to Map (execution order of watchers, directives, computed)
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
