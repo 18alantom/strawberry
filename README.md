@@ -219,9 +219,7 @@ need to be implemented to further Strawberry.
 
 ### Running Dev Mode
 
-Strawberry has only two dev dependencies: `esbuild` and `typescript`. Other than
-that the [Live Preview](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server)
-VSCode plugin is used to serve the HTML files for dev.
+Strawberry has only two dev dependencies: `esbuild` and `typescript`.
 
 To run Strawberry in dev mode:
 
@@ -240,6 +238,16 @@ yarn dev
 You can now create an HTML file in the repository and add `script:src` to link
 the generated `index.js` file. You can serve this using the Live Preview plugin.
 
+To view the rendered HTML you need to serve it locally for that you can use the [Live Preview](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) VSCode plugin, or run [this](https://docs.python.org/3/library/http.server.html#:~:text=python%20%2Dm%20http.server%20%2D%2Dbind%20127.0.0.1):
+
+```bash
+# Cd into strawberry root
+cd strawberry
+
+# Run simple python server to serve files in strawberry
+python -m http.server 8080 --bind 127.0.0.1
+```
+
 ### Tests
 
 Right now tests just involve linking strawberry to an html file (`test.*.html`),
@@ -249,6 +257,26 @@ and Failures are printed in the console.
 See [`test.html`](https://github.com/18alantom/strawberry/blob/main/tests/test.html) for an example.
 
 To see all tests in one place, open `test/index.html`.
+
+### Website
+
+The website has two dependencies required to run, `sb.min.js` and
+`highlight.min.js` for running strawberry in the example and highlighting all the code.
+
+You can run the `pubwebsite.sh` script which downloads these files:
+
+```bash
+./pubwebsite.sh
+```
+
+And then respond with `"n"` when it asks to publish:
+
+```bash
+$ Publish the website? [y/n]: n
+$ /Users/you/Desktop/projects/strawberry
+```
+
+After the script has run, `website/index.html` should render as expected.
 
 ---
 
