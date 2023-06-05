@@ -1,0 +1,36 @@
+<!-- 1. Link Strawberry -->
+<head>
+    <script src="https://unpkg.com/sberry@0.0.0-alpha.1/dist/sb.min.js"></script>
+  </head>
+  
+  <!-- 2. Define a Component -->
+  <template name="cool-button">
+    <button
+      style="
+          padding: 0.5rem 1rem;
+          border: 2px solid black;
+          border-radius: 0px;
+          box-shadow: 4px 4px 0px gray;
+        "
+    >
+      <slot />
+    </button>
+  </template>
+  
+  <!-- 3. Initialize Strawberry -->
+  <script>
+    const data = sb.init();
+    data.counter = 0;
+  </script>
+  
+  <!-- 4. Use the Component -->
+  <body>
+    <cool-button sb-mark="message" onclick="data.counter += 1">
+      loading...
+    </cool-button>
+  </body>
+  
+  <!-- 5. Update the Component -->
+  <script>
+    data.message = () => `Clicked ${data.counter} times`;
+  </script>
