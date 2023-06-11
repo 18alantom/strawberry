@@ -12,7 +12,7 @@ type DirectiveParams = {
 };
 type Directive = (params: DirectiveParams) => void;
 type DirectiveMap = Record<string, Directive>;
-type BasicAttrs = 'mark' | 'child' | 'if';
+type BasicAttrs = 'mark' | 'if' | 'ifnot';
 
 const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
@@ -345,27 +345,35 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       const stringValue = typeof value === 'string' ? value : String(value);
       el.innerText = stringValue;
     },
-    if: ({ el, value, key }) => {
-      const isShow = Boolean(value);
-      const isTemplate = el instanceof HTMLTemplateElement;
-
-      if (isShow && isTemplate) {
-        const child = el.content.firstElementChild;
-        if (!child) {
-          return;
-        }
-        child.setAttribute(attr('if'), key);
-        el.replaceWith(child);
-      }
-
-      if (!isShow && !isTemplate) {
-        const temp = document.createElement('template');
-        temp.content.appendChild(el.cloneNode(true));
-        temp.setAttribute(attr('if'), key);
-        el.replaceWith(temp);
-      }
-    },
+    if: ({ el, value, key }) => ifOrIfNot(el, value, key, 'if'),
+    ifnot: ({ el, value, key }) => ifOrIfNot(el, value, key, 'ifnot'),
   };
+}
+
+function ifOrIfNot(
+  el: Element,
+  value: unknown,
+  key: string,
+  type: 'if' | 'ifnot'
+) {
+  const isShow = type === 'if' ? !!value : !value;
+  const isTemplate = el instanceof HTMLTemplateElement;
+
+  if (isShow && isTemplate) {
+    const child = el.content.firstElementChild;
+    if (!child) {
+      return;
+    }
+    child.setAttribute(attr(type), key);
+    el.replaceWith(child);
+  }
+
+  if (!isShow && !isTemplate) {
+    const temp = document.createElement('template');
+    temp.content.appendChild(el.cloneNode(true));
+    temp.setAttribute(attr(type), key);
+    el.replaceWith(temp);
+  }
 }
 
 /**
