@@ -1,15 +1,16 @@
 type Complex = object | Function;
-type Reactive<T extends any> = T extends Complex ? T & Meta : never;
+type Prefixed<T extends any> = T extends Complex ? T & Meta : never;
 type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
 type Watcher = (newValue: unknown) => unknown;
-type Directive = (
-  el: Element, // The element to which the directive has been applied.
-  value: unknown, // The updated value.
-  key: string, // Period '.' delimited key that points to the value in the global data object.
-  isDelete: boolean, // Whether the value was deleted `delete data.prop`.
-  parent: Reactive<object>, // The parent object to which the value belongs (actual object not its proxy).
-  prop: string // Property of the parent which points to the value, `parent[prop] ≈ value`
-) => unknown;
+type DirectiveParams = {
+  el: Element; // The element to which the directive has been applied.
+  value: unknown; // The updated value.
+  key: string; // Period '.' delimited key that points to the value in the global data object.
+  isDelete: boolean; // Whether the value was deleted `delete data.prop`.
+  parent: Prefixed<object>; // The parent object to which the value belongs (the proxied object).
+  prop: string; // Property of the parent which points to the value, `parent[prop] ≈ value`
+};
+type Directive = (params: DirectiveParams) => void;
 type DirectiveMap = Record<string, Directive>;
 type BasicAttrs = 'mark' | 'child' | 'if';
 
@@ -17,12 +18,12 @@ const dependencyRegex = /\w+(\??[.]\w+)+/g;
 
 let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
   null;
-let globalData: null | Reactive<{}> = null;
+let globalData: null | Prefixed<{}> = null;
 let globalPrefix = 'sb-';
 
 const attr = (k: BasicAttrs) => globalPrefix + k;
 
-function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
+function reactive<T>(obj: T, prefix: string): T | Prefixed<T> {
   if (obj !== null && (typeof obj === 'object' || typeof obj === 'function')) {
     Object.defineProperty(obj, '__sb_prefix', {
       value: prefix,
@@ -42,23 +43,23 @@ function reactive<T>(obj: T, prefix: string): T | Reactive<T> {
     obj[prop as K] = reactive(value, newprefix);
   }
 
-  return new Proxy(obj, ReactivityHandler) as Reactive<T>;
+  return new Proxy(obj, ReactivityHandler) as Prefixed<T>;
 }
 
-class ReactivityHandler implements ProxyHandler<Reactive<object>> {
+class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
   static watchers: Record<string, Watcher[]> = {};
   static dependents: Record<
     string,
     {
       key: string;
       computed: Function;
-      parent: Reactive<object>;
+      parent: Prefixed<object>;
       prop: string;
     }[]
   > = {};
 
   static get(
-    target: Reactive<object>,
+    target: Prefixed<object>,
     prop: string | symbol,
     receiver: unknown
   ): unknown {
@@ -75,7 +76,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static set(
-    target: Reactive<object>,
+    target: Prefixed<object>,
     prop: string | symbol,
     value: unknown,
     receiver: unknown
@@ -91,13 +92,13 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
-    this.update(value, key, false, target, prop);
+    this.update(reactiveValue, key, false, target, prop);
     this.updateComputed(key);
     return success;
   }
 
   static deleteProperty(
-    target: Reactive<object>,
+    target: Prefixed<object>,
     prop: string | symbol
   ): boolean {
     if (typeof prop === 'symbol') {
@@ -120,7 +121,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   }
 
   static defineProperty(
-    target: Reactive<object>,
+    target: Prefixed<object>,
     prop: string | symbol,
     descriptor: PropertyDescriptor
   ): boolean {
@@ -146,7 +147,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
   static setDependents(
     value: Function,
     key: string,
-    parent: Reactive<object>,
+    parent: Prefixed<object>,
     prop: string
   ) {
     Object.defineProperty(value, '__sb_dependencies', {
@@ -181,7 +182,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       keyset.add(key + dkey);
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value, parent, prop });
-      (value as Reactive<Function>).__sb_dependencies = true;
+      (value as Prefixed<Function>).__sb_dependencies = true;
     }
   }
 
@@ -216,7 +217,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     value: unknown,
     key: string,
     isDelete: boolean,
-    parent: Reactive<object>,
+    parent: Prefixed<object>,
     prop: string
   ) {
     if (typeof value === 'function') {
@@ -249,7 +250,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
     value: unknown,
     key: string,
     isDelete: boolean,
-    parent: Reactive<object>,
+    parent: Prefixed<object>,
     prop: string,
     searchRoot?: Element | Document,
     skipUpdateArrayElements?: boolean
@@ -266,7 +267,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       sortArrayItemElements(parent);
     }
 
-    const isRDO = isReactiveObject(value);
+    const isRDO = isPrefixedObject(value);
     if (isRDO && Array.isArray(value)) {
       const placeholderKey = `${key}.#`;
       const rootQuery = `[${attr('mark')}="${placeholderKey}"]`;
@@ -314,19 +315,21 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       const attrName = globalPrefix + attrSuffix;
       const directive = this.directives[attrSuffix]!;
       const els = searchRoot.querySelectorAll(`[${attrName}='${key}']`);
-      els.forEach((el) => directive(el, value, key, isDelete, parent, prop));
+      els.forEach((el) =>
+        directive({ el, value, key, isDelete, parent, prop })
+      );
 
       if (
         searchRoot instanceof Element &&
         searchRoot.getAttribute(attrName) === key
       ) {
-        directive(searchRoot, value, key, isDelete, parent, prop);
+        directive({ el: searchRoot, value, key, isDelete, parent, prop });
       }
     }
   }
 
   static directives: DirectiveMap = {
-    mark: (el, value, _, isDelete) => {
+    mark: ({ el, value, isDelete }) => {
       if (isDelete) {
         return remove(el);
       }
@@ -342,7 +345,7 @@ class ReactivityHandler implements ProxyHandler<Reactive<object>> {
       const stringValue = typeof value === 'string' ? value : String(value);
       el.innerText = stringValue;
     },
-    if: (el, value, key) => {
+    if: ({ el, value, key }) => {
       const isshow = Boolean(value);
       const istemplate = el instanceof HTMLTemplateElement;
       if (isshow && istemplate) {
@@ -374,7 +377,7 @@ function updateArrayItemElement(
   key: string,
   idx: string,
   item: unknown,
-  array: Reactive<unknown[]>
+  array: Prefixed<unknown[]>
 ) {
   /**
    * Called only when an array element is updated,
@@ -386,7 +389,7 @@ function updateArrayItemElement(
    * This function inserts the child element before the template.
    */
   const arrayItems = document.querySelectorAll(`[${attr('mark')}="${key}"]`);
-  if (arrayItems.length && !isReactiveObject(item)) {
+  if (arrayItems.length && !isPrefixedObject(item)) {
     /**
      * For primitive items just updating the innerText
      * suffices, no need to replace the element.
@@ -457,7 +460,7 @@ function updateArrayItemElement(
   }
 }
 
-function sortArrayItemElements(array: Reactive<unknown[]>): void {
+function sortArrayItemElements(array: Prefixed<unknown[]>): void {
   /**
    * Called only when length prop of an array is set.
    *
@@ -690,7 +693,7 @@ function remove(el: Element) {
   el.remove();
 }
 
-function isReactiveObject(value: unknown): value is Reactive<object> {
+function isPrefixedObject(value: unknown): value is Prefixed<object> {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -715,7 +718,7 @@ function getValue(key: string, value: unknown) {
   return value;
 }
 
-function getParent(target: Reactive<object>) {
+function getParent(target: Prefixed<object>) {
   const key = target.__sb_prefix;
   if (!key) {
     return undefined;
@@ -948,26 +951,17 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [ ] Handling Computed
-  - [ ] Update handling of computed, reference to  "this"  i.e. parent obj?
-  - [ ] Cache computed
+- [ ] Remove need to apply names on slot elements (if slot names are mark names).
+- [ ] Enable `this.computed`, reference to  "this"  i.e. parent obj
 - [ ] sb-if usage with sb-mark
-- [ ] Remove need to apply names on slot elements
-- [?] Change use of Records to Map (execution order of watchers, directives, computed)
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
-- [^] Cache el references? (might not be required, 10ms for 1_000_000 divs querySelectorAll)
-- [x] Buffer updates during load
-- [x] Remove the need for `sb.register`
-- [x] Update sb register so that this can be done:
-     ```
-      - [x] sb.register`<template name="new-p"><p><slot/></p></template>`;
-      - [x] sb.register(`<template name="new-p"><p><slot/></p></template>`);
-      - [x] sb.register('new-p', `<p><slot/></p>`);
-     ```
+- [?] Change use of Records to Map (execution order of watchers, directives, computed)
+- [ ] Performance
+  - [ ] Cache computed
+  - [^] Cache el references? (might not be required, 10ms for 1_000_000 divs querySelectorAll)
 
 
-How to Handle Nested Lists or Nested Objects?
 
 
 # Notes
