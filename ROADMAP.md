@@ -17,11 +17,11 @@ cost of not being able to do _everything_.
 **List**
 
 - [ ] [Setting `sb-*` props for Strawberry inserted elements](#setting-sb--props-for-strawberry-inserted-elements)
-- [ ] [Two-way Binding](#two-way-binding)
 - [ ] [Directives for Strawberry Created Elements](#directives-for-strawberry-created-elements)
 - [ ] [Logic Encapsulation in Templates](#logic-encapsulation-in-templates)
 - [ ] [Interactive Elements in Templates](#interactive-elements-in-templates)
 - [ ] [Animating `sb-if`](#animating-sb-if)
+- [x] [Two-way Binding](#skip-two-way-binding) (SKIP)
 - [x] [Nested Components](#done-nested-components)
 - [x] [Defer Directives](#done-defer-ui-updates)
 
@@ -50,16 +50,6 @@ with the nested components is a solution.
   data.a = [{ name: 'Example', link: 'example.com' }];
 </script>
 ```
-
-# Two-way Binding
-
-**Problem** is `sb-mark` can't be used on input elements to change their
-value when the RDO prop changes, or vice versa.
-
-**Solution** is writing a new directive for this is trivial `sb-model` but the question is
-
-1. Should this be in strawberry?
-2. Should this be incorporated into `sb-mark` when element is an input element?
 
 # Directives for Strawberry Created Elements
 
@@ -105,7 +95,6 @@ where the script is loaded.
 A **solution** is that when RDO props are set inside the `head` tag, the updates
 are deferred until the ready state changes to `"interactive"`. This happens only
 after the DOM has been parsed but before all assets have been fetched.
-
 
 # `[DONE]` Nested Components
 
@@ -192,3 +181,35 @@ they can be marked like so:
 ```
 
 _Note: this prevents `"#"` from being used as a valid RDO prop name._
+
+# `[SKIP]` Two-way Binding
+
+**Problem** is `sb-mark` can't be used on input elements to change their
+value when the RDO prop changes, or vice versa.
+
+**Solution** is writing a new directive for this:
+
+```javascript
+const data = sb.init({
+  directives: {
+    bind({ el, value, parent, prop }) {
+      el.value = value;
+      el.oninput ??= (e) => {
+        parent[prop] = e.target.value;
+      };
+    },
+  },
+});
+```
+
+This is trivial, but the question is
+
+1. Should this be in strawberry?
+2. Should this be incorporated into `sb-mark` when element is an input element?
+
+Probably not considering, two way binding can be:
+
+- lazy: i.e. using a `change` listener
+- delayed: assignment takes place only after a time
+
+So, instead of inserting the batteries—in the spirit of simplicity—this probably won't be added in.

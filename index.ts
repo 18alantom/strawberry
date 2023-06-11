@@ -346,9 +346,10 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       el.innerText = stringValue;
     },
     if: ({ el, value, key }) => {
-      const isshow = Boolean(value);
-      const istemplate = el instanceof HTMLTemplateElement;
-      if (isshow && istemplate) {
+      const isShow = Boolean(value);
+      const isTemplate = el instanceof HTMLTemplateElement;
+
+      if (isShow && isTemplate) {
         const child = el.content.firstElementChild;
         if (!child) {
           return;
@@ -357,7 +358,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
         el.replaceWith(child);
       }
 
-      if (!isshow && !istemplate) {
+      if (!isShow && !isTemplate) {
         const temp = document.createElement('template');
         temp.content.appendChild(el.cloneNode(true));
         temp.setAttribute(attr('if'), key);
@@ -662,20 +663,27 @@ function initializeClone(
     /**
      * Change clone's directive keys
      */
-    if (clone.getAttribute(attrName) === placeholderKey) {
-      clone.setAttribute(attrName, key);
-    }
+    setKey(clone, attrName, key, placeholderKey);
 
     /**
-     * Change clone's chilren's directive keys
+     * Change clone's children's directive keys
      */
     clone.querySelectorAll(`[${attrName}]`).forEach((ch) => {
-      const pkey = ch.getAttribute(attrName);
-      if (pkey?.startsWith(placeholderKey)) {
-        const newPkey = key + pkey.slice(placeholderKey.length);
-        ch.setAttribute(attr('mark'), newPkey);
-      }
+      setKey(ch, attrName, key, placeholderKey);
     });
+  }
+}
+
+function setKey(
+  el: Element,
+  attrName: string,
+  key: string,
+  placeholderKey: string
+) {
+  const pkey = el.getAttribute(attrName);
+  if (pkey?.startsWith(placeholderKey)) {
+    const newPkey = key + pkey.slice(placeholderKey.length);
+    el.setAttribute(attrName, newPkey);
   }
 }
 
@@ -952,6 +960,7 @@ export function unwatch(key?: string, watcher?: Watcher) {
 
 TODO:
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
+- [ ] Computed value reassigns __sb_prefix. Eg if computed is a filtered reactive array.
 - [ ] Enable `this.computed`, reference to  "this"  i.e. parent obj
 - [ ] sb-if usage with sb-mark
 - [ ] Review the code, take note of implementation and hacks
