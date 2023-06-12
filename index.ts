@@ -7,7 +7,7 @@ type DirectiveParams = {
   value: unknown; // The updated value.
   key: string; // Period '.' delimited key that points to the value in the global data object.
   isDelete: boolean; // Whether the value was deleted `delete data.prop`.
-  parent: Prefixed<object>; // The parent object to which the value belongs (the proxied object).
+  parent: Prefixed<object>; // The parent object to which the value belongs (the proxied object, unless isDelete).
   prop: string; // Property of the parent which points to the value, `parent[prop] ≈ value`
 };
 type Directive = (params: DirectiveParams) => void;
@@ -61,7 +61,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
   static get(
     target: Prefixed<object>,
     prop: string | symbol,
-    receiver: unknown
+    receiver: Prefixed<object>
   ): unknown {
     if (prop === '__parent') {
       return getParent(target);
@@ -79,7 +79,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     target: Prefixed<object>,
     prop: string | symbol,
     value: unknown,
-    receiver: unknown
+    receiver: Prefixed<object>
   ): boolean {
     if (typeof prop === 'symbol') {
       return Reflect.set(target, prop, value, receiver);
@@ -88,11 +88,11 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     const key = getKey(prop, target.__sb_prefix);
     const reactiveValue = reactive(value, key);
     if (typeof value === 'function') {
-      this.setDependents(value, key, target, prop);
+      this.setDependents(value, key, receiver, prop);
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
-    this.update(reactiveValue, key, false, target, prop);
+    this.update(reactiveValue, key, false, receiver, prop);
     this.updateComputed(key);
     return success;
   }
