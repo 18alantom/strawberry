@@ -14,8 +14,6 @@ type Directive = (params: DirectiveParams) => void;
 type DirectiveMap = Record<string, Directive>;
 type BasicAttrs = 'mark' | 'if' | 'ifnot';
 
-const dependencyRegex = /\w+(\??[.]\w+)+/g;
-
 let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
   null;
 let globalData: null | Prefixed<{}> = null;
@@ -47,12 +45,15 @@ function reactive<T>(obj: T, prefix: string): T | Prefixed<T> {
 }
 
 class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
+  static settingDependents: boolean = false;
+  static dependencySet: Set<string> = new Set();
+
   static watchers: Record<string, Watcher[]> = {};
   static dependents: Record<
     string,
     {
       key: string;
-      computed: Function;
+      computed: Prefixed<Function>;
       parent: Prefixed<object>;
       prop: string;
     }[]
@@ -67,9 +68,21 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       return getParent(target);
     }
 
+    if (
+      this.settingDependents &&
+      typeof prop === 'string' &&
+      Object.getOwnPropertyDescriptor(target, prop)?.enumerable
+    ) {
+      this.dependencySet.add(getKey(prop, target.__sb_prefix));
+    }
+
     const value = Reflect.get(target, prop, receiver);
     if (value?.__sb_dependencies) {
-      return value();
+      const computed = value();
+      if (computed instanceof Promise) {
+        return computed.then((v) => clone(v));
+      }
+      return clone(computed);
     }
 
     return value;
@@ -88,7 +101,9 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     const key = getKey(prop, target.__sb_prefix);
     const reactiveValue = reactive(value, key);
     if (typeof value === 'function') {
-      this.setDependents(value, key, receiver, prop);
+      // TODO: Recursively set dependents of all
+      // enumerable functions in the object
+      this.setDependents(value as Prefixed<Function>, key, receiver, prop);
     }
 
     const success = Reflect.set(target, prop, reactiveValue, receiver);
@@ -108,10 +123,8 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     const key = getKey(prop, target.__sb_prefix);
     const success = Reflect.deleteProperty(target, prop);
     this.update(undefined, key, true, target, prop);
-    for (const dep of this.dependents[key] ?? []) {
-      this.update(dep.computed, dep.key, false, dep.parent, dep.prop);
-    }
 
+    delete this.dependents[key];
     for (const k of Object.keys(this.dependents)) {
       this.dependents[k] =
         this.dependents[k]?.filter((d) => d.key !== key) ?? [];
@@ -145,7 +158,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
    * @param prop property of the parent which points to the value, parent[prop] ≈ value. undefined if dependency
    */
   static setDependents(
-    value: Function,
+    value: Prefixed<Function>,
     key: string,
     parent: Prefixed<object>,
     prop: string
@@ -156,34 +169,22 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       writable: true,
     });
 
-    const keyset = new Set<string>();
-    for (const matches of value.toString().matchAll(dependencyRegex)) {
-      const dep = matches[0]?.replace('?.', '.');
-      if (!dep) {
-        continue;
-      }
+    /**
+     * Capture dependencies in `dependencySet`. The set is updated
+     * in the `get` trap of the proxy.
+     */
+    this.settingDependents = true;
+    this.dependencySet.clear();
+    value();
+    this.settingDependents = false;
 
-      const sidx = dep.indexOf('.') + 1;
-      const dkey = dep.slice(sidx);
-
-      if (keyset.has(key + dkey)) {
-        continue;
-      }
-
-      let root = dkey;
-      if (root.includes('.')) {
-        root = root.slice(0, root.indexOf('.'));
-      }
-
-      if (!globalData?.hasOwnProperty(root)) {
-        continue;
-      }
-
-      keyset.add(key + dkey);
-      this.dependents[dkey] ??= [];
-      this.dependents[dkey]!.push({ key, computed: value, parent, prop });
-      (value as Prefixed<Function>).__sb_dependencies = true;
+    const dependent = { key, computed: value, parent, prop };
+    for (const dep of this.dependencySet) {
+      this.dependents[dep] ??= [];
+      this.dependents[dep]!.push(dependent);
     }
+
+    value.__sb_dependencies = this.dependencySet.size > 0;
   }
 
   /**
@@ -198,8 +199,14 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       )
       .flatMap((k) => this.dependents[k] ?? []);
 
+    const executed = new Set<Function>();
     for (const dep of dependents) {
+      if (executed.has(dep.computed)) {
+        continue;
+      }
+
       this.update(dep.computed, dep.key, false, dep.parent, dep.prop);
+      executed.add(dep.computed);
     }
   }
 
@@ -221,12 +228,12 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     prop: string
   ) {
     if (typeof value === 'function') {
-      value = reactive(value(), key);
+      value = runComputed(value, key);
     }
 
     if (value instanceof Promise) {
       (value as Promise<unknown>).then((v: unknown) =>
-        this.update(reactive(v, key), key, false, parent, prop)
+        this.update(v, key, false, parent, prop)
       );
       return;
     }
@@ -748,6 +755,29 @@ function getParent(target: Prefixed<object>) {
   return getValue(key.slice(0, li), globalData);
 }
 
+function runComputed(computed: Function, key: string) {
+  const value = computed();
+  if (value instanceof Promise) {
+    return value.then((v) => reactive(clone(v), key));
+  }
+
+  return reactive(clone(value), key);
+}
+
+function clone<T>(target: T): T {
+  if (typeof target !== 'object' || target === null) {
+    return target;
+  }
+
+  const cl = Array.isArray(target) ? [] : {};
+  for (const key in target) {
+    // @ts-ignore
+    cl[key] = clone(target[key]);
+  }
+
+  return cl as T;
+}
+
 /**
  * External API Code
  */
@@ -968,8 +998,6 @@ export function unwatch(key?: string, watcher?: Watcher) {
 
 TODO:
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
-- [ ] Computed value reassigns __sb_prefix. Eg if computed is a filtered reactive array.
-- [ ] Enable `this.computed`, reference to  "this"  i.e. parent obj
 - [ ] sb-if usage with sb-mark
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
@@ -984,6 +1012,20 @@ TODO:
 # Notes
 
 TODO: Move these elsewhere maybe
+
+## Computed
+
+- Computed function if not arrow function can access this as the parent object
+- Computed values won't update if computed dependencies are deleted.
+- Computed values don't return proxies
+- Computed functions are executed once when set.
+- Computed values can be promises, if they are promises, the ui is updated after
+  the promise is resolved, returned value (obviously) is still a promise.
+- If a block in a computed has a dependency and the block is not executed when called
+  the dependency is not counted.
+- Do not change dependency type, eg from string to array, this will cause unexpected computed
+  behaviour
+- Define the dependency before setting the computed
 
 ## Nesting and Looping
 

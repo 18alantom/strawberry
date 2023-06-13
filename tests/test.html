@@ -157,7 +157,10 @@
       );
 
       delete data.a;
-      test(p5.innerText === ',', 'p#5 (computed) updated on a delete');
+      test(
+        p5.innerText === ['thing', 'thing'].join(','),
+        'p#5 (computed) data save after a delete'
+      );
 
       delete data.b;
       test(!p5.isConnected, 'p#5 not connected after b (computed) delete');

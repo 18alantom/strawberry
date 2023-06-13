@@ -4,42 +4,24 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sb Test - Defer</title>
+    <title>Sb Test - Conditionals</title>
     <link rel="stylesheet" href="test.css" />
 
     <script src="../index.js"></script>
     <script src="./test.js"></script>
+  </head>
+
+  <body>
     <script>
       const data = sb.init();
-      const p1InnerText = 'Hello, World';
-
-      data.a = p1InnerText;
     </script>
-  </head>
-  <body>
     <main>
-      <h1>Defer Tests</h1>
+      <h1>Conditionals Tests</h1>
       <div>
         <p>Success: <span id="success">0</span></p>
         <p>Failure: <span id="failure">0</span></p>
         <p>Total: <span id="total">0</span></p>
       </div>
     </main>
-
-    <div>
-      <p id="p1" sb-mark="a"></p>
-    </div>
-
-    <script>
-      const p1 = document.getElementById('p1');
-      test(!p1.innerText, 'p1 innerText not set');
-
-      document.addEventListener('DOMContentLoaded', () => {
-        test(
-          p1.innerText === p1InnerText,
-          `p1 innerText set to ${p1InnerText}`
-        );
-      });
-    </script>
   </body>
 </html>

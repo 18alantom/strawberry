@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sb Test - Computed</title>
+    <link rel="stylesheet" href="test.css" />
+
+    <script src="../index.js"></script>
+    <script src="./test.js"></script>
+  </head>
+
+  <body>
+    <script>
+      const data = sb.init();
+    </script>
+
+    <main>
+      <h1>Computed Tests</h1>
+      <div>
+        <p>Success: <span id="success">0</span></p>
+        <p>Failure: <span id="failure">0</span></p>
+        <p>Total: <span id="total">0</span></p>
+      </div>
+    </main>
+
+    <p sb-mark="b" id="p1"></p>
+    <script>
+      data.a = 10;
+      data.b = () => data.a + 10;
+      const p1 = document.getElementById('p1');
+      test(p1.innerText === '20', 'p1 innerText is 20');
+
+      data.a = 20;
+      test(p1.innerText === '30', 'p1 innerText is 30 after a change');
+
+      data.b = '-';
+      test(p1.innerText === '-', 'p1 innerText is - after update');
+
+      data.c = 20;
+      data.b = () => data.c.toFixed(2);
+      test(p1.innerText === '20.00', 'p1 innerText is 20.00 reset computed');
+
+      data.c = 0;
+      test(p1.innerText === '0.00', 'p1 innerText is 0.00 after a change');
+
+      delete data.c;
+      try {
+        data.b;
+      } catch (err) {
+        test(
+          err.message.includes('undefined'),
+          'getting b throws error after dep c delete'
+        );
+      }
+
+      data.a = [1, 2, 3, 4];
+      data.b = () => data.a;
+      test(
+        data.b.__sb_prefix === undefined,
+        'computed values do not return prefixed object'
+      );
+      test(data.a.__sb_prefix === 'a', 'a value proxy unchanged');
+
+      data.a = 'hello';
+      data.b = async () => data.a.toUpperCase() + ' WORLD';
+      data.b.then((v) => {
+        test(v === 'HELLO WORLD', 'computed returns promise');
+        test(p1.innerText === 'HELLO WORLD', 'UI updated after promise');
+        data.b = '';
+      });
+    </script>
+
+    <p sb-mark="d" id="p2"></p>
+    <script>
+      const p2 = document.getElementById('p2');
+      data.c = [1, 2, 3, 4, 5];
+      data.d = () => data.c.reduce((a, b) => a + b);
+
+      test(data.d === 15, 'computed from array reduce');
+      test(p2.innerText === '15', 'ui updated from array reduce computed');
+
+      data.c.pop();
+      test(data.d === 10, 'computed from array pop');
+      test(p2.innerText === '10', 'computed from array reduce pop');
+
+      data.x = [{ val: true }, { val: false }];
+      data.y = () => data.x.filter((v) => v.val);
+
+      test(data.y.length === 1, 'y is filtered version of x');
+      test(data.y[0] !== data.x[0], 'y[0] is a clone of x[0]');
+      test(data.y[0].__sb_prefix === undefined, 'y[0] is not prefixed');
+
+      data.d = {
+        a: 2,
+        b() {
+          return this.a + 2;
+        },
+      };
+
+      test(data.d.a === 2, 'd.a is 2');
+      test(data.d.b === 4, 'd.b is 4, this works');
+
+      console.log(data.d.b);
+    </script>
+  </body>
+</html>
