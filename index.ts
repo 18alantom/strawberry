@@ -955,6 +955,20 @@ export function unwatch(key?: string, watcher?: Watcher) {
 }
 
 /**
+ * Creates a computed property based on a getter function.
+ * @param getter A function that computes the value of the property.
+ * @returns The computed property.
+ */
+export function computed<T>(getter: () => T): Prefixed<Function> {
+  const computedValue = getter();
+  const key = getKey(getter.name, globalPrefix); // Assuming the getter function has a name
+  ReactivityHandler.setDependents(getter, key, globalData!, '');
+  ReactivityHandler.update(computedValue, key, false, globalData!, '');
+  return reactive(getter, key) as Prefixed<Function>;
+}
+
+
+/**
 
 # Scratch Space
 
