@@ -29,11 +29,30 @@
     <script>
       data.a = 10;
       data.b = () => data.a + 10;
+      test(data.b === 20, 'b is 20, arrow func');
+
       const p1 = document.getElementById('p1');
       test(p1.innerText === '20', 'p1 innerText is 20');
+      test(data.b === 20, 'b is 20, arrow func');
+
+      let b_reg_execCount = 0;
+      data.b_reg = function () {
+        b_reg_execCount += 1;
+        return this.a + 10;
+      };
+      test(b_reg_execCount === 2, 'b_reg is executed twice on set');
+      test(data.b_reg === 20, 'b_reg is 20, regular func (use this)');
+
+      data.b_reg_data = function () {
+        return data.a + 10;
+      };
+      test(data.b_reg_data === 20, 'b_reg_data is 20, regular func (use data)');
 
       data.a = 20;
       test(p1.innerText === '30', 'p1 innerText is 30 after a change');
+      test(data.b === 30, 'b is 30, arrow func');
+      test(data.b_reg === 30, 'b_reg is 30, regular func (use this)');
+      test(data.b_reg_data === 30, 'b_reg_data is 30, regular func (use data)');
 
       data.b = '-';
       test(p1.innerText === '-', 'p1 innerText is - after update');
@@ -68,7 +87,11 @@
       data.b.then((v) => {
         test(v === 'HELLO WORLD', 'computed returns promise');
         test(p1.innerText === 'HELLO WORLD', 'UI updated after promise');
-        data.b = '';
+        // Clear previous elements
+        delete data.b_reg_data;
+        delete data.b_reg;
+        delete data.b;
+        delete data.a;
       });
     </script>
 
@@ -97,12 +120,35 @@
         b() {
           return this.a + 2;
         },
+        c: () => {
+          return data.d.a + 2;
+        },
       };
 
       test(data.d.a === 2, 'd.a is 2');
-      test(data.d.b === 4, 'd.b is 4, this works');
+      test(
+        data.d.b === 4,
+        'd.b is 4, regular function works (use this, preset computed)'
+      );
+      test(data.d.c === 4, 'd.c is 4, arrow function works (preset computed)');
 
-      console.log(data.d.b);
+      data.d.d = function () {
+        return this.a + 4;
+      };
+      data.d.e = () => {
+        return data.d.a + 4;
+      };
+      test(
+        data.d.d === 6,
+        'd.d is 6, regular function works (use this, postset computed)'
+      );
+      test(data.d.e === 6, 'd.e is 6, arrow function works (postset computed)');
+      /**
+       * TODO:
+       * - [ ] computed using this
+       * - [ ] preset computed
+       * - [ ] computed with computed dependency
+       */
     </script>
   </body>
 </html>

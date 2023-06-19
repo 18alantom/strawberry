@@ -99,13 +99,13 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     const key = getKey(prop, target.__sb_prefix);
-    const reactiveValue = reactive(value, key);
     if (typeof value === 'function') {
-      // TODO: Recursively set dependents of all
-      // enumerable functions in the object
-      this.setDependents(value as Prefixed<Function>, key, receiver, prop);
+      // TODO: Recursively set dependents of all enumerable functions in object
+      value = value.bind(receiver);
+      this.setDependents(value as Function, key, receiver, prop);
     }
 
+    const reactiveValue = reactive(value, key);
     const success = Reflect.set(target, prop, reactiveValue, receiver);
     this.update(reactiveValue, key, false, receiver, prop);
     this.updateComputed(key);
@@ -158,17 +158,11 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
    * @param prop property of the parent which points to the value, parent[prop] ≈ value. undefined if dependency
    */
   static setDependents(
-    value: Prefixed<Function>,
+    value: Function,
     key: string,
     parent: Prefixed<object>,
     prop: string
   ) {
-    Object.defineProperty(value, '__sb_dependencies', {
-      value: false,
-      enumerable: false,
-      writable: true,
-    });
-
     /**
      * Capture dependencies in `dependencySet`. The set is updated
      * in the `get` trap of the proxy.
@@ -178,13 +172,23 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     value();
     this.settingDependents = false;
 
-    const dependent = { key, computed: value, parent, prop };
+    Object.defineProperty(value, '__sb_dependencies', {
+      value: this.dependencySet.size > 0,
+      enumerable: false,
+      writable: true,
+    });
+
+    const dependent = {
+      key,
+      computed: value as Prefixed<Function>,
+      parent,
+      prop,
+    };
+
     for (const dep of this.dependencySet) {
       this.dependents[dep] ??= [];
       this.dependents[dep]!.push(dependent);
     }
-
-    value.__sb_dependencies = this.dependencySet.size > 0;
   }
 
   /**
@@ -1026,6 +1030,8 @@ TODO: Move these elsewhere maybe
 - Do not change dependency type, eg from string to array, this will cause unexpected computed
   behaviour
 - Define the dependency before setting the computed
+- Do not reassign a computed value's function
+- Functions without any dependencies return functions on set trap
 
 ## Nesting and Looping
 
