@@ -1,6 +1,9 @@
+const sbPrefix = Symbol.for('@sb/prefix');
+const sbDependencies = Symbol.for('@sb/depends');
+
 type Complex = object | Function;
 type Prefixed<T extends any> = T extends Complex ? T & Meta : never;
-type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
+type Meta = { [sbPrefix]: string; [sbDependencies]?: boolean };
 type Watcher = (newValue: unknown) => unknown;
 type DirectiveParams = {
   el: Element; // The element to which the directive has been applied.
@@ -25,7 +28,7 @@ const attr = (k: BasicAttrs) => globalPrefix + k;
 
 function reactive<T>(obj: T, prefix: string): T | Prefixed<T> {
   if (obj !== null && (typeof obj === 'object' || typeof obj === 'function')) {
-    Object.defineProperty(obj, '__sb_prefix', {
+    Object.defineProperty(obj, sbPrefix, {
       value: prefix,
       enumerable: false,
       writable: true,
@@ -68,7 +71,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     const value = Reflect.get(target, prop, receiver);
-    if (value?.__sb_dependencies) {
+    if (value?.[sbDependencies]) {
       return value();
     }
 
@@ -85,7 +88,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       return Reflect.set(target, prop, value, receiver);
     }
 
-    const key = getKey(prop, target.__sb_prefix);
+    const key = getKey(prop, target[sbPrefix]);
     const reactiveValue = reactive(value, key);
     if (typeof value === 'function') {
       this.setDependents(value, key, target, prop);
@@ -105,7 +108,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       return Reflect.deleteProperty(target, prop);
     }
 
-    const key = getKey(prop, target.__sb_prefix);
+    const key = getKey(prop, target[sbPrefix]);
     const success = Reflect.deleteProperty(target, prop);
     this.update(undefined, key, true, target, prop);
     for (const dep of this.dependents[key] ?? []) {
@@ -126,8 +129,8 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     descriptor: PropertyDescriptor
   ): boolean {
     if (
-      prop === '__sb_prefix' &&
-      '__sb_prefix' in target &&
+      prop === sbPrefix &&
+      sbPrefix in target &&
       /\.\d+$/.test(descriptor.value)
     ) {
       return Reflect.set(target, prop, descriptor.value);
@@ -150,7 +153,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     parent: Prefixed<object>,
     prop: string
   ) {
-    Object.defineProperty(value, '__sb_dependencies', {
+    Object.defineProperty(value, sbDependencies, {
       value: false,
       enumerable: false,
       writable: true,
@@ -182,7 +185,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       keyset.add(key + dkey);
       this.dependents[dkey] ??= [];
       this.dependents[dkey]!.push({ key, computed: value, parent, prop });
-      (value as Prefixed<Function>).__sb_dependencies = true;
+      (value as Prefixed<Function>)[sbDependencies] = true;
     }
   }
 
@@ -296,7 +299,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     } else if (isRDO) {
       for (const k in value) {
         this.callDirectives(
-          value[k as keyof typeof value],
+          value[k as unknown as keyof typeof value],
           getKey(k, key),
           isDelete,
           value,
@@ -398,7 +401,7 @@ function updateArrayItemElement(
     return;
   }
 
-  const prefix = array.__sb_prefix;
+  const prefix = array[sbPrefix];
   const placeholderKey = key.replace(/\d+$/, '#');
   let itemReplaced: boolean = false;
 
@@ -472,7 +475,7 @@ function sortArrayItemElements(array: Prefixed<unknown[]>): void {
    * (get, set sequence) don't always happen in the right order such as
    * when using splice. So sorting must take place after the update.
    */
-  const templateKey = getKey('#', array.__sb_prefix);
+  const templateKey = getKey('#', array[sbPrefix]);
   const templates = document.querySelectorAll(
     `[${attr('mark')}="${templateKey}"]`
   );
@@ -706,7 +709,7 @@ function isPrefixedObject(value: unknown): value is Prefixed<object> {
     return false;
   }
 
-  return '__sb_prefix' in value;
+  return sbPrefix in value;
 }
 
 function getKey(prop: string, prefix: string) {
@@ -727,7 +730,7 @@ function getValue(key: string, value: unknown) {
 }
 
 function getParent(target: Prefixed<object>) {
-  const key = target.__sb_prefix;
+  const key = target[sbPrefix];
   if (!key) {
     return undefined;
   }
@@ -960,7 +963,7 @@ export function unwatch(key?: string, watcher?: Watcher) {
 
 TODO:
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
-- [ ] Computed value reassigns __sb_prefix. Eg if computed is a filtered reactive array.
+- [ ] Computed value reassigns [sbPrefix]. Eg if computed is a filtered reactive array.
 - [ ] Enable `this.computed`, reference to  "this"  i.e. parent obj
 - [ ] sb-if usage with sb-mark
 - [ ] Review the code, take note of implementation and hacks
