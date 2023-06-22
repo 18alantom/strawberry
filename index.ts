@@ -13,16 +13,52 @@ type DirectiveParams = {
 type Directive = (params: DirectiveParams) => void;
 type DirectiveMap = Record<string, Directive>;
 type BasicAttrs = 'mark' | 'if' | 'ifnot';
+type DependentMap = Record<
+  string,
+  {
+    key: string;
+    computed: Prefixed<Function>;
+    parent: Prefixed<object>;
+    prop: string;
+  }[]
+>;
 
 let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
   null;
 let globalData: null | Prefixed<{}> = null;
 let globalPrefix = 'sb-';
 
+/**
+ * Object used to maintain computed values
+ * - `isEvaluating`: set to true when evaluating a computed function
+ * - `set`: used to keep track of dependencies when evaluating a computed function
+ * - `map`: keeps track of dependencies keyed by dependents
+ */
+const globalDeps = {
+  isEvaluating: false,
+  set: new Set<string>(),
+  map: {} as DependentMap,
+};
+
 const attr = (k: BasicAttrs) => globalPrefix + k;
 
-function reactive<T>(obj: T, prefix: string): T | Prefixed<T> {
-  if (obj !== null && (typeof obj === 'object' || typeof obj === 'function')) {
+function reactive<T>(
+  obj: T,
+  prefix: string,
+  parent?: Prefixed<object>,
+  prop?: string
+): T | Prefixed<T> {
+  if (obj === null) {
+    return obj;
+  }
+
+  const isObject = typeof obj === 'object';
+  const isFunction = typeof obj === 'function';
+  if (isFunction && parent) {
+    obj = (obj as Function).bind(parent);
+  }
+
+  if (isObject || isFunction) {
     Object.defineProperty(obj, '__sb_prefix', {
       value: prefix,
       enumerable: false,
@@ -30,35 +66,28 @@ function reactive<T>(obj: T, prefix: string): T | Prefixed<T> {
     });
   }
 
-  if (typeof obj !== 'object' || obj === null) {
+  if (isFunction && prop && parent) {
+    setDependents(obj as Prefixed<Function>, prefix, parent, prop);
+    return obj;
+  }
+
+  if (!isObject) {
     return obj;
   }
 
   type K = keyof T;
-  for (const prop of Object.keys(obj)) {
+  const proxied = new Proxy(obj as object, ReactivityHandler) as Prefixed<T>;
+  for (const prop of Object.keys(obj as object)) {
     const newprefix = getKey(prop, prefix);
     const value = obj[prop as K];
-    obj[prop as K] = reactive(value, newprefix);
+    obj[prop as K] = reactive(value, newprefix, proxied, prop);
   }
 
-  return new Proxy(obj, ReactivityHandler) as Prefixed<T>;
+  return proxied;
 }
 
 class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
-  static settingDependents: boolean = false;
-  static dependencySet: Set<string> = new Set();
-
   static watchers: Record<string, Watcher[]> = {};
-  static dependents: Record<
-    string,
-    {
-      key: string;
-      computed: Prefixed<Function>;
-      parent: Prefixed<object>;
-      prop: string;
-    }[]
-  > = {};
-
   static get(
     target: Prefixed<object>,
     prop: string | symbol,
@@ -69,11 +98,11 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     if (
-      this.settingDependents &&
+      globalDeps.isEvaluating &&
       typeof prop === 'string' &&
       Object.getOwnPropertyDescriptor(target, prop)?.enumerable
     ) {
-      this.dependencySet.add(getKey(prop, target.__sb_prefix));
+      globalDeps.set.add(getKey(prop, target.__sb_prefix));
     }
 
     const value = Reflect.get(target, prop, receiver);
@@ -99,13 +128,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     const key = getKey(prop, target.__sb_prefix);
-    if (typeof value === 'function') {
-      // TODO: Recursively set dependents of all enumerable functions in object
-      value = value.bind(receiver);
-      this.setDependents(value as Function, key, receiver, prop);
-    }
-
-    const reactiveValue = reactive(value, key);
+    const reactiveValue = reactive(value, key, receiver, prop);
     const success = Reflect.set(target, prop, reactiveValue, receiver);
     this.update(reactiveValue, key, false, receiver, prop);
     this.updateComputed(key);
@@ -124,10 +147,9 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     const success = Reflect.deleteProperty(target, prop);
     this.update(undefined, key, true, target, prop);
 
-    delete this.dependents[key];
-    for (const k of Object.keys(this.dependents)) {
-      this.dependents[k] =
-        this.dependents[k]?.filter((d) => d.key !== key) ?? [];
+    delete globalDeps.map[key];
+    for (const k of Object.keys(globalDeps.map)) {
+      globalDeps.map[k] = globalDeps.map[k]?.filter((d) => d.key !== key) ?? [];
     }
 
     return success;
@@ -150,61 +172,19 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
   }
 
   /**
-   * Stores the list of dependencies the computed value is dependent on.
-   *
-   * @param value function for the computed value
-   * @param key period '.' joined key that points to the value in the global reactive data object
-   * @param parent object to which `value` belongs (not the proxy of the object). undefined if dependency
-   * @param prop property of the parent which points to the value, parent[prop] ≈ value. undefined if dependency
-   */
-  static setDependents(
-    value: Function,
-    key: string,
-    parent: Prefixed<object>,
-    prop: string
-  ) {
-    /**
-     * Capture dependencies in `dependencySet`. The set is updated
-     * in the `get` trap of the proxy.
-     */
-    this.settingDependents = true;
-    this.dependencySet.clear();
-    value();
-    this.settingDependents = false;
-
-    Object.defineProperty(value, '__sb_dependencies', {
-      value: this.dependencySet.size > 0,
-      enumerable: false,
-      writable: true,
-    });
-
-    const dependent = {
-      key,
-      computed: value as Prefixed<Function>,
-      parent,
-      prop,
-    };
-
-    for (const dep of this.dependencySet) {
-      this.dependents[dep] ??= [];
-      this.dependents[dep]!.push(dependent);
-    }
-  }
-
-  /**
    * Called when a computed value's dependent is changed.
    *
    * @param key period '.' separated key to the computed value's dep, used to track the computed value
    */
   static updateComputed(key: string) {
-    const dependents = Object.keys(this.dependents)
+    const dependentNames = Object.keys(globalDeps.map)
       .filter(
         (k) => k === key || k.startsWith(key + '.') || key.startsWith(k + '.')
       )
-      .flatMap((k) => this.dependents[k] ?? []);
+      .flatMap((k) => globalDeps.map[k] ?? []);
 
     const executed = new Set<Function>();
-    for (const dep of dependents) {
+    for (const dep of dependentNames) {
       if (executed.has(dep.computed)) {
         continue;
       }
@@ -232,7 +212,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     prop: string
   ) {
     if (typeof value === 'function') {
-      value = runComputed(value, key);
+      value = runComputed(value, key, parent, prop);
     }
 
     if (value instanceof Promise) {
@@ -384,6 +364,48 @@ function ifOrIfNot(
     temp.content.appendChild(el.cloneNode(true));
     temp.setAttribute(attr(type), key);
     el.replaceWith(temp);
+  }
+}
+
+/**
+ * Stores the list of dependencies the computed value is dependent on.
+ *
+ * @param value function for the computed value
+ * @param key period '.' joined key that points to the value in the global reactive data object
+ * @param parent object to which `value` belongs (not the proxy of the object). undefined if dependency
+ * @param prop property of the parent which points to the value, parent[prop] ≈ value. undefined if dependency
+ */
+function setDependents(
+  value: Prefixed<Function>,
+  key: string,
+  parent: Prefixed<object>,
+  prop: string
+) {
+  /**
+   * Capture dependencies in `globalDeps.set`. The set is updated
+   * in the `get` trap of the proxy.
+   */
+  globalDeps.isEvaluating = true;
+  globalDeps.set.clear();
+  value();
+  globalDeps.isEvaluating = false;
+
+  Object.defineProperty(value, '__sb_dependencies', {
+    value: globalDeps.set.size > 0,
+    enumerable: false,
+    writable: true,
+  });
+
+  const dependent = {
+    key,
+    computed: value,
+    parent,
+    prop,
+  };
+
+  for (const dep of globalDeps.set) {
+    globalDeps.map[dep] ??= [];
+    globalDeps.map[dep]!.push(dependent);
   }
 }
 
@@ -759,13 +781,18 @@ function getParent(target: Prefixed<object>) {
   return getValue(key.slice(0, li), globalData);
 }
 
-function runComputed(computed: Function, key: string) {
+function runComputed(
+  computed: Function,
+  key: string,
+  parent: Prefixed<object>,
+  prop: string
+) {
   const value = computed();
   if (value instanceof Promise) {
-    return value.then((v) => reactive(clone(v), key));
+    return value.then((v) => reactive(clone(v), key, parent, prop));
   }
 
-  return reactive(clone(value), key);
+  return reactive(clone(value), key, parent, prop);
 }
 
 function clone<T>(target: T): T {
