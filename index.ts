@@ -1,6 +1,6 @@
 type Complex = object | Function;
 type Prefixed<T extends any> = T extends Complex ? T & Meta : never;
-type Meta = { __sb_prefix: string; __sb_dependencies?: boolean };
+type Meta = { __sb_prefix: string };
 type Watcher = (newValue: unknown) => unknown;
 type DirectiveParams = {
   el: Element; // The element to which the directive has been applied.
@@ -106,7 +106,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     const value = Reflect.get(target, prop, receiver);
-    if (value?.__sb_dependencies) {
+    if (typeof value === 'function' && value.__sb_prefix) {
       const computed = value();
       if (computed instanceof Promise) {
         return computed.then((v) => clone(v));
@@ -199,7 +199,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
    * to the object can be propagated
    *
    * @param value new value that is set, if deleted then `undefined`
-   * @param key period '.' joined key that points to the value in the global reactive data object
+   * @param key period '.' joined key that points to the value in the global reactive object
    * @param isDelete whether the value is being deleted (only if being called from deleteProperty)
    * @param parent object to which `value` belongs (actual object, not the proxy)
    * @param prop property of the parent which points to the value, `parent[prop] ≈ value`
@@ -371,7 +371,7 @@ function ifOrIfNot(
  * Stores the list of dependencies the computed value is dependent on.
  *
  * @param value function for the computed value
- * @param key period '.' joined key that points to the value in the global reactive data object
+ * @param key period '.' joined key that points to the value in the global reactive object
  * @param parent object to which `value` belongs (not the proxy of the object). undefined if dependency
  * @param prop property of the parent which points to the value, parent[prop] ≈ value. undefined if dependency
  */
@@ -389,12 +389,6 @@ function setDependents(
   globalDeps.set.clear();
   value();
   globalDeps.isEvaluating = false;
-
-  Object.defineProperty(value, '__sb_dependencies', {
-    value: globalDeps.set.size > 0,
-    enumerable: false,
-    writable: true,
-  });
 
   const dependent = {
     key,
@@ -814,7 +808,7 @@ function clone<T>(target: T): T {
  */
 
 /**
- * Initializes strawberry and returns the reactive data object.
+ * Initializes strawberry and returns the reactive object.
  */
 export function init(config?: { prefix?: string; directives?: DirectiveMap }) {
   globalData ??= reactive({}, '') as {} & Meta;
@@ -982,7 +976,7 @@ function registerComponent(template: HTMLTemplateElement) {
 
 /**
  * Sets watchers for a given key. Key is a dot separated string
- * for a value in side the reactive data object.
+ * for a value in side the reactive object.
  *
  * For example:
  *
@@ -1000,7 +994,7 @@ function registerComponent(template: HTMLTemplateElement) {
  * would be `a.b.0`.
  *
  * Watcher is a function that receives the newValue that is set.
- * watchers should not alter the reactive data object. If a dependent
+ * watchers should not alter the reactive object. If a dependent
  * value is required then a `computed` value should be used.
  */
 export function watch(key: string, watcher: Watcher) {
@@ -1039,26 +1033,10 @@ TODO:
 
 
 
-
 # Notes
 
 TODO: Move these elsewhere maybe
 
-## Computed
-
-- Computed function if not arrow function can access this as the parent object
-- Computed values won't update if computed dependencies are deleted.
-- Computed values don't return proxies
-- Computed functions are executed once when set.
-- Computed values can be promises, if they are promises, the ui is updated after
-  the promise is resolved, returned value (obviously) is still a promise.
-- If a block in a computed has a dependency and the block is not executed when called
-  the dependency is not counted.
-- Do not change dependency type, eg from string to array, this will cause unexpected computed
-  behaviour
-- Define the dependency before setting the computed
-- Do not reassign a computed value's function
-- Functions without any dependencies return functions on set trap
 
 ## Nesting and Looping
 
@@ -1144,9 +1122,9 @@ immediately. In such a case it is better to place the setting of the RDO values 
 the `body` tag so that the appropriate elements are found.
 
 
-## The Reactive Data Object
+## The Reactive Object
 
-The value received when `sb.init` is the reactive data object.
+The value received when `sb.init` is the reactive object.
 
 ```javascript
 const data = sb.init();
@@ -1155,25 +1133,6 @@ Think of this as an object that holds data that is meant to be
 rendered. You can set any kind of value to this object, but Strawberry
 listens to changes to only the following type of objects
 
-## Handling of Computed
-
-Dependencies of a computed function are checked by converting the
-function into a string and searching for '.' or '?.' separated values.
-
-A variable in computed is considered as a dependency only if it has been
-defined before setting the computed.
-
-This is incorrect:
-```javascript
-data.b = () => data.a + 10;
-data.a = 10;
-```
-
-This is correct:
-```javascript
-data.a = 10;
-data.b = () => data.a + 10;
-```
 
 ## HTMLTemplateElement based Components
 
