@@ -27,9 +27,7 @@ class Manager {
   splits = { head: '', templates: '', body: '', script: '' };
 
   constructor() {
-    const proxy = new Proxy(this, handler);
-    window.addEventListener('DOMContentLoaded', this.load.bind(proxy));
-    return proxy;
+    return new Proxy(this, handler);
   }
 
   async load() {
@@ -249,3 +247,8 @@ function setDataCopy() {
     });
   }
 }
+
+window.addEventListener('DOMContentLoaded', () => setDataCopy());
+document
+  .getElementById('hl-script')
+  .addEventListener('load', () => new Manager().load());

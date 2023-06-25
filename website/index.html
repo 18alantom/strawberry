@@ -71,7 +71,7 @@
       href="assets/fonts/vt323-latin.woff2"
       crossorigin
     />
-    <link rel="preload" as="image" type="image/png" href="assets/sb.png" />
+    <link rel="preload" as="image" href="assets/sb.png" />
     <link
       rel="preload"
       as="image"
@@ -80,16 +80,8 @@
     />
 
     <!-- Loading Highlight JS and Example Manager -->
-    <script src="highlight.min.js"></script>
+    <script id="hl-script" src="highlight.min.js" async></script>
     <script src="index.js"></script>
-    <script>
-      window.addEventListener('DOMContentLoaded', () => {
-        highlight();
-        setDataCopy();
-      });
-
-      const m = new Manager();
-    </script>
   </head>
   <body>
     <!-- Header -->
