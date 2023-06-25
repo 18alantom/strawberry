@@ -1,0 +1,263 @@
+<!-- HEAD_START -->
+<script src="sb.min.js"></script>
+<style>
+  :root {
+    --color-0: plum;
+    --color-1: #f79256;
+    --color-2: #fbd1a2;
+    --color-3: #7dcfb6;
+    --color-4: #00b2ca;
+    --color-5: #1d4e89;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: var(--color-1);
+    background-image: url('./assets/noise.png');
+
+    overflow-y: hidden;
+    height: 100vh;
+    margin: 0;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  main {
+    flex-shrink: 0;
+    padding: 0.5rem;
+    background-color: var(--color-0);
+    border: 2px solid black;
+    width: 400px;
+    box-shadow: -4px 4px 0px rgba(0, 0, 0, 0.4);
+  }
+
+  @media screen and (max-width: 464px) {
+    main {
+      transform: scale(0.8);
+    }
+  }
+
+  h1 {
+    margin: 0px;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  input {
+    border: 2px solid black;
+  }
+
+  button {
+    border: 2px solid black;
+    background-color: white;
+    width: 4rem;
+    cursor: pointer;
+    font-style: italic;
+    background-color: var(--color-2);
+  }
+
+  button:hover {
+    background-color: var(--color-1);
+  }
+
+  .container {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: 1fr 0.75fr;
+  }
+
+  .move-form {
+    background-color: var(--color-3);
+    border: 2px solid black;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #inv-items,
+  #inv-moves {
+    display: flex;
+    flex-direction: column;
+    border: 2px solid black;
+    padding: 0.5rem;
+    gap: 0.5rem;
+
+    max-height: calc(0.5rem * 2 + 2px + 110px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    font-size: 14px;
+  }
+
+  #inv-items {
+    min-height: 100%;
+    background-color: var(--color-4);
+  }
+
+  #inv-moves {
+    grid-column: 1 / 3;
+    color: white;
+    background-color: var(--color-5);
+  }
+
+  #add {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #add > input {
+    width: calc(100% - 4rem - 0.5rem);
+  }
+</style>
+<!-- HEAD_END -->
+
+<!-- TEMPLATES_START -->
+<!-- Inv Item Template -->
+<template name="inv-item">
+  <div class="inv-item">
+    <p style="margin: 0"><slot name="name" /></p>
+    <p style="margin: 0"><slot name="quantity" /></p>
+
+    <style>
+      .inv-item {
+        display: flex;
+        justify-content: space-between;
+      }
+    </style>
+  </div>
+</template>
+
+<!-- Inv Movement Template -->
+<template name="inv-move">
+  <div class="inv-move">
+    <p class="mindex"><slot name="index" /></p>
+    <p style="font-style: italic"><slot name="time" /></p>
+    <p style="font-weight: 600"><slot name="item" /></p>
+    <p><slot name="quantity" /></p>
+
+    <style>
+      .inv-move {
+        display: grid;
+        justify-content: space-between;
+        grid-template-columns: 2rem 4rem 1fr 4rem;
+      }
+
+      .inv-move > p {
+        margin: 0;
+        text-align: right;
+      }
+
+      .mindex::after {
+        content: '.';
+      }
+    </style>
+  </div>
+</template>
+<!-- TEMPLATES_END -->
+
+<!-- BODY_START -->
+<main>
+  <h1>Inventory</h1>
+  <div class="container">
+    <div id-class="inv-form">
+      <div id="add">
+        <input id="item-name" placeholder="Add item" />
+        <button id="add-button">add</button>
+      </div>
+
+      <div class="move-form" style="margin-top: 0.5rem">
+        <input id="move-item" placeholder="Item to move" />
+        <input id="move-qty" placeholder="Qty to move" />
+        <button sb-disable="cannotMove" id="move-button">move</button>
+      </div>
+    </div>
+
+    <div id="inv-items">
+      <inv-item sb-mark="items.#">
+        <span slot="name" sb-mark="items.#.name"></span>
+        <span slot="quantity" sb-mark="items.#.quantity"></span>
+      </inv-item>
+    </div>
+
+    <div id="inv-moves" sb-mark="moves" sb-child="inv-move">
+      <inv-move sb-mark="moves.#">
+        <span slot="index" sb-mark="moves.#.index"></span>
+        <span slot="time" sb-mark="moves.#.time"></span>
+        <span slot="item" sb-mark="moves.#.item"></span>
+        <span slot="quantity" sb-mark="moves.#.quantity"></span>
+      </inv-move>
+    </div>
+  </div>
+</main>
+<!-- BODY_END -->
+
+<script>
+  // LOGIC_START
+  // Strawberry init
+  const data = sb.init();
+
+  data.qtys = {};
+  data.moves = [];
+  data.items = () =>
+    Object.keys(data.qtys).map((name) => ({
+      name,
+      quantity: data.qtys[name],
+    }));
+
+  // "Business Logic"
+  function create(item) {
+    if (item in data.qtys) {
+      return alert(`${item} exists.`);
+    }
+
+    data.qtys[item] = 0;
+  }
+
+  function move(item, quantity) {
+    const stock = data.qtys[item] ?? 0;
+    if (quantity + stock < 0) {
+      return alert(`Insufficient quantity ${stock} of ${item}.`);
+    }
+
+    data.qtys[item] = quantity + stock;
+    data.moves.push({
+      index: data.moves.length + 1,
+      time: new Date().toTimeString().split(' ')[0],
+      item,
+      quantity,
+    });
+  }
+
+  // Button onclick listeners
+  document.getElementById('add-button')?.addEventListener('click', () => {
+    const item = document.getElementById('item-name')?.value;
+    if (typeof item === 'string' && item) {
+      create(item);
+    }
+  });
+
+  document.getElementById('move-button')?.addEventListener('click', () => {
+    const item = document.getElementById('move-item')?.value;
+    const qty = Number(document.getElementById('move-qty')?.value);
+
+    if (
+      typeof item === 'string' &&
+      item &&
+      !Number.isNaN(qty) &&
+      Number.isFinite(qty)
+    ) {
+      move(item, qty);
+    }
+  });
+
+  // Demo Data
+  create('Strawberry');
+  create('Mulberry');
+  move('Strawberry', 7);
+  move('Mulberry', 1);
+  move('Strawberry', -1);
+  // LOGIC_END
+</script>
