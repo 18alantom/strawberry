@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="normal" />
     <meta name="theme-color" content="#342f3a" />
 
-    <!--  -->
+    <!-- Regular Meta Tags -->
     <meta
       name="name"
       content="Strawberry - Zero-Dependency, Build-Free JavaScript Framework"
@@ -20,10 +20,7 @@
       name="description"
       content="Zero-dependency, build-free JavaScript framework for the artisanal web."
     />
-    <meta
-      name="image"
-      content="https://strawberry.quest/assets/banner.png"
-    />
+    <meta name="image" content="https://strawberry.quest/assets/banner.png" />
     <meta name="language" content="en-US" />
 
     <!-- OG Meta Tags -->
@@ -58,27 +55,33 @@
 
     <title>Strawberry - Zero-Dependency, Build-Free JavaScript Framework</title>
     <link rel="shortcut icon" href="assets/sb.png" />
-
-    <!-- Loading Local Styles -->
-    <link rel="stylesheet" href="assets/common.css" />
     <link rel="stylesheet" href="assets/index.css" />
-    <link rel="stylesheet" href="assets/example.css" />
-    <link rel="stylesheet" href="assets/hljs-html.css" />
-    <link rel="stylesheet preload" href="assets/fonts/fonts.css" />
+
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="assets/fonts/press-start-2p-latin.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="assets/fonts/vt323-latin.woff2"
+      crossorigin
+    />
+    <link rel="preload" as="image" href="assets/sb.png" />
+    <link
+      rel="preload"
+      as="image"
+      type="image/svg+xml"
+      href="assets/grid.svg"
+    />
 
     <!-- Loading Highlight JS and Example Manager -->
-    <script src="highlight.min.js"></script>
-    <script src="index.js"></script>
-    <script>
-      window.addEventListener('DOMContentLoaded', highlight);
-      const m = new Manager();
-    </script>
-    <style>
-      #leadin > p,
-      #simple-example {
-        margin: 0;
-      }
-    </style>
+    <script id="hl-script" src="highlight.min.js" async></script>
+    <script src="index.js" async></script>
   </head>
   <body>
     <!-- Header -->
@@ -103,28 +106,27 @@
       </p>
     </section>
 
-    <!-- Simple Example -->
     <pre
       id="simple-example"
-    ><code class="copy" data-copy="Copy">&lt;!-- Define Components --&gt;
-&lt;template name="plum-p"&gt;
-  &lt;p style="color: plum"&gt;&lt;slot /&gt;&lt;/p&gt;
-&lt;/template&gt;
+    ><code class="copy hljs nohighlight" data-copy="Copy"><span class="hljs-comment">&lt;!-- Define Components --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"plum-p"</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">style</span>=<span class="hljs-string">"color: plum"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">slot</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
 
-&lt;!-- Initialize Strawberry --&gt;
-&lt;script&gt;
-  const data = sb.init();
-&lt;/script&gt;
+<span class="hljs-comment">&lt;!-- Initialize Strawberry --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="language-javascript">
+  <span class="hljs-keyword">const</span> data = sb.<span class="hljs-title function_">init</span>();
+</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
 
-&lt;!-- Use Components --&gt;
-&lt;plum-p sb-mark="message"&gt;
+<span class="hljs-comment">&lt;!-- Use Components --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">plum-p</span> <span class="hljs-attr">sb-mark</span>=<span class="hljs-string">"message"</span>&gt;</span>
   A plum colored p element!
-&lt;/plum-p&gt;
+<span class="hljs-tag">&lt;/<span class="hljs-name">plum-p</span>&gt;</span>
 
-&lt;!-- Dynamically Update Components --&gt;
-&lt;script&gt;
-  data.message = 'Hello, World!';
-&lt;/script&gt;</code></pre>
+<span class="hljs-comment">&lt;!-- Dynamically Update Components --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="language-javascript">
+  data.<span class="hljs-property">message</span> = <span class="hljs-string">'Hello, World!'</span>;
+</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span></code></pre>
 
     <!-- Nav Bar -->
     <nav class="navbar">
@@ -154,7 +156,7 @@
     <section id="setup" class="block">
       <h2>Basic Setup</h2>
       <p>For a basic setup, run this command in your terminal:</p>
-      <pre><code class="copy" data-copy="Copy">curl -so- https://raw.githubusercontent.com/18alantom/strawberry/main/setup.sh | bash</code></pre>
+      <pre><code class="copy hljs nohighlight" data-copy="Copy"><span class="hljs-keyword">curl</span> <span class="hljs-property">-so-</span> https://raw.githubusercontent.com/18alantom/strawberry/main/setup.sh <span class="hljs-meta">|</span> <span class="hljs-keyword">bash</span></code></pre>
       <p>
         This will download and run a
         <a
@@ -189,7 +191,7 @@
         To use a link, copy and paste the following script tag at the top of
         your <code>index.html</code>:
       </p>
-      <pre><code class="copy" data-copy="Copy">&lt;script src=&quot;https://unpkg.com/sberry@0.0.1-alpha.0/dist/sb.min.js&quot;&gt;&lt;/script&gt;</code></pre>
+      <pre><code class="copy hljs nohighlight" data-copy="Copy"><span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://unpkg.com/sberry@0.0.1-alpha.0/dist/sb.min.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span></code></pre>
       <p>
         Once that is done the <code>window.sb</code> object should be defined.
       </p>
@@ -393,19 +395,4 @@
       <p>©2023</p>
     </footer>
   </body>
-  <script>
-    const key = 'data-copy';
-    const success = 'Copied :)';
-    for (const el of document.getElementsByClassName('copy')) {
-      el.addEventListener('click', (e) => {
-        navigator.clipboard.writeText(el.innerText);
-
-        const c = el.getAttribute(key);
-        el.setAttribute(key, success);
-        if (c !== success) {
-          setTimeout(() => el.setAttribute('data-copy', c), 1000);
-        }
-      });
-    }
-  </script>
 </html>
