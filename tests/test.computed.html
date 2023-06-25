@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sb Test - Computed</title>
+    <link rel="stylesheet" href="test.css" />
+
+    <script src="../index.js"></script>
+    <script src="./test.js"></script>
+  </head>
+
+  <body>
+    <script>
+      const data = sb.init();
+    </script>
+
+    <main>
+      <h1>Computed Tests</h1>
+      <div>
+        <p>Success: <span id="success">0</span></p>
+        <p>Failure: <span id="failure">0</span></p>
+        <p>Total: <span id="total">0</span></p>
+      </div>
+    </main>
+
+    <p sb-mark="b" id="p1"></p>
+    <script>
+      data.a = 10;
+      data.b = () => data.a + 10;
+      test(data.b === 20, 'b is 20, arrow func');
+
+      const p1 = document.getElementById('p1');
+      test(p1.innerText === '20', 'p1 innerText is 20');
+      test(data.b === 20, 'b is 20, arrow func');
+
+      let b_reg_execCount = 0;
+      data.b_reg = function () {
+        b_reg_execCount += 1;
+        return this.a + 10;
+      };
+      test(b_reg_execCount === 2, 'b_reg is executed twice on set');
+      test(data.b_reg === 20, 'b_reg is 20, regular func (use this)');
+
+      data.b_reg_data = function () {
+        return data.a + 10;
+      };
+      test(data.b_reg_data === 20, 'b_reg_data is 20, regular func (use data)');
+
+      data.a = 20;
+      test(p1.innerText === '30', 'p1 innerText is 30 after a change');
+      test(data.b === 30, 'b is 30, arrow func');
+      test(data.b_reg === 30, 'b_reg is 30, regular func (use this)');
+      test(data.b_reg_data === 30, 'b_reg_data is 30, regular func (use data)');
+
+      data.b = '-';
+      test(p1.innerText === '-', 'p1 innerText is - after update');
+
+      data.c = 20;
+      data.b = () => data.c.toFixed(2);
+      test(p1.innerText === '20.00', 'p1 innerText is 20.00 reset computed');
+
+      data.c = 0;
+      test(p1.innerText === '0.00', 'p1 innerText is 0.00 after a change');
+
+      delete data.c;
+      try {
+        data.b;
+      } catch (err) {
+        test(
+          err.message.includes('undefined'),
+          'getting b throws error after dep c delete'
+        );
+      }
+
+      data.a = [1, 2, 3, 4];
+      data.b = () => data.a;
+      test(
+        data.b.__sb_prefix === undefined,
+        'computed values do not return prefixed object'
+      );
+      test(data.a.__sb_prefix === 'a', 'a value proxy unchanged');
+
+      data.a = 'hello';
+      data.b = async () => data.a.toUpperCase() + ' WORLD';
+      data.b.then((v) => {
+        test(v === 'HELLO WORLD', 'computed returns promise');
+        test(p1.innerText === 'HELLO WORLD', 'UI updated after promise');
+        // Clear previous elements
+        delete data.b_reg_data;
+        delete data.b_reg;
+        delete data.b;
+        delete data.a;
+      });
+    </script>
+
+    <p sb-mark="d" id="p2"></p>
+    <script>
+      const p2 = document.getElementById('p2');
+      data.c = [1, 2, 3, 4, 5];
+      data.d = () => data.c.reduce((a, b) => a + b);
+
+      test(data.d === 15, 'computed from array reduce');
+      test(p2.innerText === '15', 'ui updated from array reduce computed');
+
+      data.c.pop();
+      test(data.d === 10, 'computed from array pop');
+      test(p2.innerText === '10', 'computed from array reduce pop');
+
+      data.x = [{ val: true }, { val: false }];
+      data.y = () => data.x.filter((v) => v.val);
+
+      test(data.y.length === 1, 'y is filtered version of x');
+      test(data.y[0] !== data.x[0], 'y[0] is a clone of x[0]');
+      test(data.y[0].__sb_prefix === undefined, 'y[0] is not prefixed');
+      data.d = '';
+    </script>
+
+    <p sb-mark="d.a"></p>
+    <p sb-mark="d.b"></p>
+    <p sb-mark="d.c"></p>
+    <p sb-mark="d.d"></p>
+    <p sb-mark="d.e"></p>
+    <p sb-mark="d.f"></p>
+    <script>
+      const pda = document.querySelector(`[sb-mark="d.a"]`);
+      const pdb = document.querySelector(`[sb-mark="d.b"]`);
+      const pdc = document.querySelector(`[sb-mark="d.c"]`);
+      const pdd = document.querySelector(`[sb-mark="d.d"]`);
+      const pde = document.querySelector(`[sb-mark="d.e"]`);
+      const pdf = document.querySelector(`[sb-mark="d.f"]`);
+
+      data.d = {
+        a: 2,
+        b() {
+          return this.a + 2;
+        },
+        c: () => {
+          return data.d.a + 4;
+        },
+      };
+      test(pda.innerText === '2', 'pda is 2');
+      test(pdb.innerText === '4', 'pdb is 4');
+      test(pdc.innerText === '6', 'pdc is 6');
+      test(pdd.innerText === '', 'pdd is empty');
+      test(pde.innerText === '', 'pde is empty');
+      test(pdf.innerText === '', 'pdf is empty');
+
+      test(data.d.a === 2, 'd.a is 2');
+      test(
+        data.d.b === 4,
+        'd.b is 4, regular function works (use this, preset computed)'
+      );
+      test(data.d.c === 6, 'd.c is 6, arrow function works (preset computed)');
+
+      data.d.d = function () {
+        return this.a + 6;
+      };
+      test(pdd.innerText === '8', 'pdd is 8');
+      test(
+        data.d.d === 8,
+        'd.d is 6, regular function works (use this, postset computed)'
+      );
+
+      data.d.e = () => {
+        return data.d.a + 8;
+      };
+
+      test(pde.innerText === '10', 'pde is 10');
+      test(
+        data.d.e === 10,
+        'd.e is 10, arrow function works (postset computed)'
+      );
+
+      data.d.f = function () {
+        return ['a', 'b', 'c', 'd', 'e'].reduce((acc, x) => acc + this[x], 0);
+      };
+
+      test(
+        data.d.f === 30,
+        'd.f is 30, computed with second order dependency works'
+      );
+      test(pdf.innerText === '30', 'pdf is 30');
+
+      data.d.a = 1;
+      test(pda.innerText === '1', 'pda is 1 after d.a change');
+      test(pdb.innerText === '3', 'pdb is 3 after d.a change');
+      test(pdc.innerText === '5', 'pdc is 5 after d.a change');
+      test(pdd.innerText === '7', 'pdd is 7 after d.a change');
+      test(pde.innerText === '9', 'pde is 9 after d.a change');
+      test(pdf.innerText === '25', 'pdf is 25 after d.a change');
+    </script>
+  </body>
+</html>
