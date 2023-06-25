@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="normal" />
     <meta name="theme-color" content="#342f3a" />
 
-    <!--  -->
+    <!-- Regular Meta Tags -->
     <meta
       name="name"
       content="Strawberry - Zero-Dependency, Build-Free JavaScript Framework"
@@ -55,15 +55,30 @@
 
     <title>Strawberry - Zero-Dependency, Build-Free JavaScript Framework</title>
     <link rel="shortcut icon" href="assets/sb.png" />
-
-    <!-- Loading Local Styles -->
     <link rel="stylesheet" href="assets/index.css" />
-    <style>
-      #leadin > p,
-      #simple-example {
-        margin: 0;
-      }
-    </style>
+
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="assets/fonts/press-start-2p-latin.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="assets/fonts/vt323-latin.woff2"
+      crossorigin
+    />
+    <link rel="preload" as="image" type="image/png" href="assets/sb.png" />
+    <link
+      rel="preload"
+      as="image"
+      type="image/svg+xml"
+      href="assets/grid.svg"
+    />
+    <link rel="preload" as="image" type="image/png" href="assets/noise.png" />
 
     <!-- Loading Highlight JS and Example Manager -->
     <script src="highlight.min.js"></script>
@@ -73,6 +88,7 @@
         highlight();
         setDataCopy();
       });
+
       const m = new Manager();
     </script>
   </head>
