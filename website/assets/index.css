@@ -263,8 +263,11 @@ header > a > div {
   width: calc(100% + 1rem);
   margin-left: -1rem;
   height: 64px;
-  background: transparent url('sb.png') space 0 0;
   background-size: 64px;
+  /* base64 sb.png cause sb.png gets queued */
+  background: transparent
+    url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAhZJREFUeF7tmjFLA0EUhI0/QBArLezEn6Eg2NoINrERtBNBsbFKZRMUxE7BRhvBxlYI6M8QOwutRPAHqPUbwg6Pt3vk9iZd2Nvs3WS+2bcv6U0Vfj0+b/+llthYve0VvoXkxxdfXALIAZUj4LX44cmayYSV9QXDKMsE73osX8IZ4L0hCSAHVIYAMsYs/vL0kcQSMwEvxvnnp6MQxqHJ455EAhDG5YDaEWCZwPZlzIDczOP62TNAAoACGIpyAFGg9Qi87mwmz//MAd7x5ZuHEMahyeNuVgLIAR1DAC0/PzhLYvw5OEqOH3/9mPHh3Ix5//Ztx5dm7bg3E8IZIAGAeTmgdgSY5fv7u4bZ+wPL/PvdtXerN9djRuxN24/zZoI7AyQAYV4O6BoCi33LPAKOzLN9ngUE1gF4feMZIAHkACFgMIzu88g0Y/7q187AswM7G4TrAMwACRCs9OQAUKB1CGxd2H4AMsn2eRz31v44v/EMkAByQMcRYGcBlgEs9Nj8iT8LsAeQAND1ZYK17jTIHmjiHYAPgC0yLI292yIKgLV+tAeI9+8+C0gAUEAOgCZp5xFARFCQ0WX6t0MWktHUL54BEgAUkAOgaVodAmxbZB0e7z7vPe+zTAnXARKA1AVyAOnxVYdAFInc+3zjGSABgpkgB4AC3hYXs3z2Uti7oPevtKyv711fAoAC2Qsh9o3IAc4/U5dG4B94vkxfngE+mwAAAABJRU5ErkJggg==')
+    space 0 0;
 }
 
 header > h1 {

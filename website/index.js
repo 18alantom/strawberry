@@ -248,7 +248,12 @@ function setDataCopy() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => setDataCopy());
+document.addEventListener('readystatechange', () => {
+  if (document.readyState === 'interactive') {
+    setDataCopy();
+  }
+});
+
 document
   .getElementById('hl-script')
   .addEventListener('load', () => new Manager().load());
