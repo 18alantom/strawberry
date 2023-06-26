@@ -93,10 +93,6 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     prop: string | symbol,
     receiver: Prefixed<object>
   ): unknown {
-    if (prop === '__parent') {
-      return getParent(target);
-    }
-
     if (
       globalDeps.isEvaluating &&
       typeof prop === 'string' &&
@@ -231,7 +227,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       if (key === k) {
         this.watchers[k]?.forEach((cb) => cb(value));
       } else if (key.startsWith(k + '.') && globalData !== null) {
-        const value = getValue(k, globalData);
+        const { value } = getValue(k);
         this.watchers[k]?.forEach((cb) => cb(value));
       }
     }
@@ -355,7 +351,9 @@ function ifOrIfNot(
     if (!child) {
       return;
     }
+
     child.setAttribute(attr(type), key);
+    syncNode(child, true);
     el.replaceWith(child);
   }
 
@@ -365,6 +363,46 @@ function ifOrIfNot(
     temp.setAttribute(attr(type), key);
     el.replaceWith(temp);
   }
+}
+
+function syncNode(el: Element, isRoot: boolean) {
+  for (const ch of el.children) {
+    syncNode(ch, false);
+  }
+
+  for (const { name, value: key } of el.attributes) {
+    if (!isDirective(name)) {
+      continue;
+    }
+
+    if (isRoot && (name === attr('if') || name === attr('ifnot'))) {
+      continue;
+    }
+
+    // TODO: Call update child
+    // - get value
+    // - call directives
+    /**
+     * getValue should be getValueAndParent, traversing down the chain should
+     * allow fetching both parent and the value.
+     *
+     * If the value is a placeholder like # then update the directives accordingly
+     */
+
+    const { value, parent, prop } = getValue(key);
+    console.log(prop, value, parent);
+    // ReactivityHandler.callDirectives(value, key, false, parent, prop, el);
+  }
+}
+
+function isDirective(attributeName: string) {
+  if (!attributeName.startsWith(globalPrefix)) {
+    return false;
+  }
+
+  return (
+    attributeName.slice(globalPrefix.length) in ReactivityHandler.directives
+  );
 }
 
 /**
@@ -748,31 +786,34 @@ function getKey(prop: string, prefix: string) {
   return prefix === '' ? prop : prefix + '.' + prop;
 }
 
-function getValue(key: string, value: unknown) {
-  for (const k of key.split('.')) {
-    const tval = typeof value;
-    if (value === null || (tval !== 'function' && tval !== 'object')) {
-      return undefined;
+/**
+ * Function gets a value from the `globalData` object when passed a '.' separated
+ * key. Also returns the `parent` object containing the `value` and the `prop` of
+ * the value in the parent object.
+ *
+ * @param key period '.' separated key to a value in the reactive `globalData`
+ */
+export function getValue(key: string) {
+  let parent = globalData;
+  let value: unknown = undefined;
+  let prop: string = '';
+
+  if (parent === null) {
+    return { parent, value, prop };
+  }
+
+  const parts = key.split('.').reverse();
+  while (parts.length) {
+    prop = parts.pop() ?? '';
+    value = Reflect.get(parent, prop);
+    if (typeof value !== 'object' || value === null) {
+      break;
+    } else {
+      parent = value as Prefixed<object>;
     }
-
-    value = Reflect.get(value as object, k);
   }
 
-  return value;
-}
-
-function getParent(target: Prefixed<object>) {
-  const key = target.__sb_prefix;
-  if (!key) {
-    return undefined;
-  }
-
-  const li = key.lastIndexOf('.');
-  if (li === -1) {
-    return globalData;
-  }
-
-  return getValue(key.slice(0, li), globalData);
+  return { parent, value, prop };
 }
 
 function runComputed(
@@ -1022,8 +1063,8 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [ ] Remove need to apply names on slot elements (if slot names are mark names).
 - [ ] sb-if usage with sb-mark
+- [ ] Remove need to apply names on slot elements (if slot names are mark names).
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
 - [?] Change use of Records to Map (execution order of watchers, directives, computed)
