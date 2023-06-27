@@ -199,13 +199,15 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
    * @param isDelete whether the value is being deleted (only if being called from deleteProperty)
    * @param parent object to which `value` belongs (actual object, not the proxy)
    * @param prop property of the parent which points to the value, `parent[prop] ≈ value`
+   * @param syncConfig object used to sync a single node on insertion from if | ifnot
    */
   static update(
     value: unknown,
     key: string,
     isDelete: boolean,
     parent: Prefixed<object>,
-    prop: string
+    prop: string,
+    syncConfig?: { directive: string; el: Element }
   ) {
     if (typeof value === 'function') {
       value = runComputed(value, key, parent, prop);
@@ -218,8 +220,19 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       return;
     }
 
-    this.callWatchers(value, key);
-    this.callDirectives(value, key, isDelete, parent, prop);
+    if (!syncConfig) {
+      this.callWatchers(value, key);
+    }
+    this.callDirectives(
+      value,
+      key,
+      isDelete,
+      parent,
+      prop,
+      undefined,
+      undefined,
+      syncConfig
+    );
   }
 
   static callWatchers(value: unknown, key: string) {
@@ -240,7 +253,8 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     parent: Prefixed<object>,
     prop: string,
     searchRoot?: Element | Document,
-    skipUpdateArrayElements?: boolean
+    skipUpdateArrayElements?: boolean,
+    syncConfig?: { directive: string; el: Element }
   ): void {
     if (globalDefer) {
       globalDefer.push([value, key, isDelete, parent, prop]);
@@ -294,6 +308,12 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     if (isRDO) {
+      return;
+    }
+
+    if (syncConfig) {
+      const directive = this.directives[syncConfig.directive];
+      directive?.({ el: syncConfig.el, value, key, isDelete, parent, prop });
       return;
     }
 
@@ -365,44 +385,52 @@ function ifOrIfNot(
   }
 }
 
-function syncNode(el: Element, isRoot: boolean) {
+/**
+ * Called from conditionals when it evaluates to true and an elemen
+ * is inserted into the DOM. Function calls `update` with `syncConfig`
+ * to trigger only the directives found on the node being synced.
+ * 
+ * @param el Element to be synced
+ * @param isSyncRoot Whether `el` is the root node from where the sync begins
+ */
+function syncNode(el: Element, isSyncRoot: boolean) {
   for (const ch of el.children) {
     syncNode(ch, false);
   }
 
-  for (const { name, value: key } of el.attributes) {
-    if (!isDirective(name)) {
+  for (let { name, value: key } of el.attributes) {
+    const directive = getDirective(name);
+    if (!directive) {
       continue;
     }
 
-    if (isRoot && (name === attr('if') || name === attr('ifnot'))) {
+    if (isSyncRoot && (directive === 'if' || directive === 'ifnot')) {
       continue;
     }
 
-    // TODO: Call update child
-    // - get value
-    // - call directives
-    /**
-     * getValue should be getValueAndParent, traversing down the chain should
-     * allow fetching both parent and the value.
-     *
-     * If the value is a placeholder like # then update the directives accordingly
-     */
+    if (key.endsWith('.#')) {
+      key = key.slice(0, -2);
+    }
 
     const { value, parent, prop } = getValue(key);
-    console.log(prop, value, parent);
-    // ReactivityHandler.callDirectives(value, key, false, parent, prop, el);
+    if (!parent) {
+      continue;
+    }
+
+    ReactivityHandler.update(value, key, false, parent, prop, {
+      directive,
+      el,
+    });
   }
 }
 
-function isDirective(attributeName: string) {
+function getDirective(attributeName: string): null | string {
   if (!attributeName.startsWith(globalPrefix)) {
-    return false;
+    return null;
   }
 
-  return (
-    attributeName.slice(globalPrefix.length) in ReactivityHandler.directives
-  );
+  const directive = attributeName.slice(globalPrefix.length);
+  return directive in ReactivityHandler.directives ? directive : null;
 }
 
 /**
