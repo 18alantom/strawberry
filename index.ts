@@ -11,7 +11,6 @@ type DirectiveParams = {
   prop: string; // Property of the parent which points to the value, `parent[prop] ≈ value`
 };
 type Directive = (params: DirectiveParams) => void;
-type DirectiveMap = Record<string, Directive>;
 type BasicAttrs = 'mark' | 'if' | 'ifnot';
 type DependentMap = Record<
   string,
@@ -27,6 +26,29 @@ let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
   null;
 let globalData: null | Prefixed<{}> = null;
 let globalPrefix = 'sb-';
+const globalDirectives = new Map<string, Directive>([
+  [
+    'mark',
+    ({ el, value, isDelete }) => {
+      if (isDelete) {
+        return remove(el);
+      }
+
+      if (!(el instanceof HTMLElement)) {
+        return;
+      }
+
+      if (typeof value === 'object' && value !== null) {
+        value = JSON.stringify(value);
+      }
+
+      const stringValue = typeof value === 'string' ? value : String(value);
+      el.innerText = stringValue;
+    },
+  ],
+  ['if', ({ el, value, key }) => ifOrIfNot(el, value, key, 'if')],
+  ['ifnot', ({ el, value, key }) => ifOrIfNot(el, value, key, 'ifnot')],
+]);
 
 /**
  * Object used to maintain computed values
@@ -312,15 +334,14 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     if (syncConfig) {
-      const directive = this.directives[syncConfig.directive];
+      const directive = globalDirectives.get(syncConfig.directive);
       directive?.({ el: syncConfig.el, value, key, isDelete, parent, prop });
       return;
     }
 
     searchRoot ??= document;
-    for (const attrSuffix in this.directives) {
+    for (const [attrSuffix, directive] of globalDirectives.entries()) {
       const attrName = globalPrefix + attrSuffix;
-      const directive = this.directives[attrSuffix]!;
       const els = searchRoot.querySelectorAll(`[${attrName}='${key}']`);
       els.forEach((el) =>
         directive({ el, value, key, isDelete, parent, prop })
@@ -334,27 +355,6 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       }
     }
   }
-
-  static directives: DirectiveMap = {
-    mark: ({ el, value, isDelete }) => {
-      if (isDelete) {
-        return remove(el);
-      }
-
-      if (!(el instanceof HTMLElement)) {
-        return;
-      }
-
-      if (typeof value === 'object' && value !== null) {
-        value = JSON.stringify(value);
-      }
-
-      const stringValue = typeof value === 'string' ? value : String(value);
-      el.innerText = stringValue;
-    },
-    if: ({ el, value, key }) => ifOrIfNot(el, value, key, 'if'),
-    ifnot: ({ el, value, key }) => ifOrIfNot(el, value, key, 'ifnot'),
-  };
 }
 
 function ifOrIfNot(
@@ -381,6 +381,10 @@ function ifOrIfNot(
     const temp = document.createElement('template');
     temp.content.appendChild(el.cloneNode(true));
     temp.setAttribute(attr(type), key);
+    const mark = el.getAttribute(attr('mark'));
+    if (mark) {
+      temp.setAttribute(attr('mark'), mark);
+    }
     el.replaceWith(temp);
   }
 }
@@ -389,7 +393,6 @@ function ifOrIfNot(
  * Called from conditionals when it evaluates to true and an elemen
  * is inserted into the DOM. Function calls `update` with `syncConfig`
  * to trigger only the directives found on the node being synced.
- * 
  * @param el Element to be synced
  * @param isSyncRoot Whether `el` is the root node from where the sync begins
  */
@@ -430,7 +433,7 @@ function getDirective(attributeName: string): null | string {
   }
 
   const directive = attributeName.slice(globalPrefix.length);
-  return directive in ReactivityHandler.directives ? directive : null;
+  return globalDirectives.has(directive) ? directive : null;
 }
 
 /**
@@ -504,8 +507,8 @@ function updateArrayItemElement(
   let itemReplaced: boolean = false;
 
   /**
-   * Loop runs, if the array item already exists so if a value is
-   * "pushed" into an array, this won'd update the element array
+   * Loop runs if the array item already exists, so if a value is
+   * "pushed" into an array, this won't update the element array
    * because the array item doesn't already exist.
    */
   for (const item of arrayItems) {
@@ -759,7 +762,7 @@ function initializeClone(
    * Change directive keys from placeholder keys
    * eg `"users.#.name"` to actual keys eg `"users.0.name"`
    */
-  for (const attrSuffix in ReactivityHandler.directives) {
+  for (const attrSuffix of globalDirectives.keys()) {
     const attrName = globalPrefix + attrSuffix;
     /**
      * Change clone's directive keys
@@ -879,7 +882,10 @@ function clone<T>(target: T): T {
 /**
  * Initializes strawberry and returns the reactive object.
  */
-export function init(config?: { prefix?: string; directives?: DirectiveMap }) {
+export function init(config?: {
+  prefix?: string;
+  directives?: Record<string, Directive>;
+}) {
   globalData ??= reactive({}, '') as {} & Meta;
   globalPrefix = config?.prefix ?? globalPrefix;
 
@@ -891,11 +897,8 @@ export function init(config?: { prefix?: string; directives?: DirectiveMap }) {
     globalDefer = [];
   }
 
-  if (config?.directives) {
-    ReactivityHandler.directives = {
-      ...ReactivityHandler.directives,
-      ...config.directives,
-    };
+  for (const [name, directive] of Object.entries(config?.directives ?? {})) {
+    globalDirectives.set(name, directive);
   }
 
   registerTemplates();
