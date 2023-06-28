@@ -12,9 +12,6 @@
   </head>
 
   <body>
-    <script>
-      const data = sb.init();
-    </script>
     <main>
       <h1>Conditionals Tests</h1>
       <div>
@@ -23,5 +20,123 @@
         <p>Total: <span id="total">0</span></p>
       </div>
     </main>
+
+    <p id="p1" sb-if="a" sb-mark="msg"></p>
+    <template sb-if="b">
+      <p id="p2" sb-mark="msg"></p>
+    </template>
+
+    <script>
+      const data = sb.init();
+      data.msg = 'hello';
+      data.a = true;
+      data.b = false;
+
+      test(document.getElementById('p1').innerText === 'hello', 'p1 is hello');
+      test(document.getElementById('p2') === null, 'p2 is not found');
+
+      data.b = true;
+      test(
+        document.getElementById('p2').innerText === 'hello',
+        'p2 is hello after sync'
+      );
+
+      data.a = false;
+      data.b = false;
+      data.msg = 'world';
+      test(document.getElementById('p1') === null, 'p1 is not found');
+
+      data.a = true;
+      test(
+        document.getElementById('p1').innerText === 'world',
+        'p1 is world after sync'
+      );
+
+      data.b = true;
+      test(
+        document.getElementById('p2').innerText === 'world',
+        'p2 is world after sync'
+      );
+
+      delete data.a;
+      test(
+        document.querySelector('[sb-if="a"]') instanceof HTMLTemplateElement,
+        'if a hidden after delete a'
+      );
+
+      data.a = true;
+      test(
+        document.querySelector('[sb-if="a"]') instanceof HTMLParagraphElement,
+        'if a visible after set a'
+      );
+
+      delete data.msg;
+      test(
+        document.querySelector('[sb-if="a"]') === null,
+        'if a not found after delete msg'
+      );
+      test(
+        document.querySelector('[sb-if="b"]') === null,
+        'if b not found after delete msg'
+      );
+
+      delete data.a;
+      delete data.b;
+
+      data.a = true;
+      test(
+        document.querySelector('[sb-if="a"]') === null,
+        'if a still not found after set a'
+      );
+    </script>
+
+    <ul id="ul1">
+      <li sb-if="a" sb-mark="li.#"></li>
+    </ul>
+
+    <script>
+      data.a = true;
+      data.li = [1, 2, 3];
+
+      test(
+        document.getElementById('ul1').childElementCount === 4,
+        '4 children in ul1'
+      );
+
+      data.a = false;
+      test(
+        [...document.getElementById('ul1').children].every(
+          (ch) => ch instanceof HTMLTemplateElement
+        ),
+        'all children in ul1 after a=false are templates'
+      );
+
+      data.a = true;
+      test(
+        document.getElementById('ul1').childElementCount === 4,
+        '4 children in ul1 after a=true'
+      );
+
+      data.a = false;
+      data.li.push(4);
+      test(
+        document.getElementById('ul1').childElementCount === 5,
+        '5 children in ul1 after push'
+      );
+      test(
+        [...document.getElementById('ul1').children].every(
+          (ch) => ch instanceof HTMLTemplateElement
+        ),
+        'all children in ul1 after a=false and push are templates'
+      );
+
+      /*
+      TODO:
+      - [ ] syncing of lists sb-if on list item
+      - [ ] syncing of lists sb-if on list parent
+      - [ ] syncing of lists sb-if uses list item
+      - [ ] syncing of nested conditionals
+       */
+    </script>
   </body>
 </html>
