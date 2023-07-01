@@ -4,10 +4,11 @@ This page is about the details of Strawberry's main directive `sb-mark`. If you
 haven't checked the [Getting Started](../getting_started.md) and the
 [Reactivity](./README.md) pages, I'd suggest doing so first.
 
-The `sb-mark` directive has two uses:
+The `sb-mark` directive has three uses:
 
-1. Mark an element for its `innerText` to be updated when some data updates.
-2. Loop an element for items in a array.
+1. [Mark](#updating-an-element-with-sb-mark) an element for its `innerText` to be updated when some data updates.
+2. [Looping](#looping) an element for items in a array.
+3. [Deleting](#deleting-values) an element.
 
 ## Updating an element with `sb-mark`
 
@@ -41,11 +42,11 @@ You can mark elements with nested values using `'.'` separated property names:
 </script>
 ```
 
-## Loops
+## Looping
 
 The second use of mark is by using it to mark an element to be looped over for
-each item in an array. This is done by using a special key, one that ends in a
-`".#"`.
+each item in an array. This is done by using a special placeholder key, i.e. a
+key that ends in a `".#"`.
 
 Consider the following example:
 
@@ -155,3 +156,12 @@ If removing elements from the DOM is not what you intend to happen, you can inst
 
 - Set an empty value eg: `data.message = ''`
 - Use CSS, eg setting the `display` property of the element to `none`
+
+> **Note**: **Deleting Arrays**
+>
+> When arrays are deleted the list elements are not deleted. You can instead set
+> the list variable to an empty list: `data.list = []`.
+>
+> Array items on the other hand can be deleted `delete data.list[0]` but this is
+> not recommended as it will lead to incorrect sequences of keys, instead use 
+> array operations such as `splice`, `pop`, or `shift`.

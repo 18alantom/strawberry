@@ -1132,7 +1132,7 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [ ] sb-if usage with sb-mark
+- [ ] Remove defer, defer can take place in async components.
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
@@ -1181,64 +1181,6 @@ and _set_ logic from one another.
   
 Another point to note is that objects being set also recursively call.
 
-## Nesting and Looping
-
-For iteratinge over an array and placing elements based on the items placeholder
-keys are used. Placeholder keys are keys with '#' in them. Each '#' represents an
-array to be iterated on.
-
-A simple example:
-
-```html
-<ul>
-  <li sb-mark="list.#"></li>
-</ul>
-
-<script>
-  data.list = ['one', 'two'];
-</script>
-```
-
-this will result in the following HTML
-
-```html
-<ul>
-  <li sb-mark="list.0">one</li>
-  <li sb-mark="list.1">two</li>
-</ul>
-```
-
-Lists can be nested like so:
-
-```html
-<div>
-  <p sb-mark="lines.#">
-    <span sb-mark="lines.#.#"></span>
-  </p>
-<div>
-
-<script>
-  data.lines = [['Hello', 'World!'], ['Bonjour', 'Monde!']];
-</script>
-```
-
-Or you can use objects in lists like so:
-
-```html
-<div sb-mark="friends.#">
-  <p sb-mark="friends.#.name"></p>
-</div>
-
-<script>
-  data.friends = [{name: 'G'}]
-</script>
-```
-
-A few details on lists: 
-- lists can't be delete, to empty an array set an empty array to the element
-- deleting array items will lead to keys with incorrect sequences
-- use splice, pop, or shift to delete array items
-
 
 ## UI Update Defer
 
@@ -1264,17 +1206,6 @@ If the `sb.init` is not placed in the head tag then all directives are executed
 immediately. In such a case it is better to place the setting of the RDO values after
 the `body` tag so that the appropriate elements are found.
 
-
-## The Reactive Object
-
-The value received when `sb.init` is the reactive object.
-
-```javascript
-const data = sb.init();
-```
-Think of this as an object that holds data that is meant to be
-rendered. You can set any kind of value to this object, but Strawberry
-listens to changes to only the following type of objects
 
 
 ## HTMLTemplateElement based Components

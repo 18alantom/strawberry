@@ -4,6 +4,18 @@ This page is about values that can be set on the reactive object.
 If you haven't checked the [Getting Started](../getting_started.md)
 and the [Reactivity](./README.md) pages, I'd suggest doing so first.
 
+## The Reactive Object
+
+The value received when `sb.init` is the reactive object.
+
+```javascript
+const data = sb.init();
+```
+
+Think of this as an object that holds data that is meant to be rendered. You can
+set any kind of value to this object, but Strawberry listens to changes to only
+the following type of objects
+
 Three kinds of values can be set on reactive objects:
 
 1. Primitive values: `strings`, `numbers`, `booleans`, `bigints`, `undefined`, `null`
