@@ -136,7 +136,6 @@ using `"isInStock"` are evaluated with the resolved value.
 > Accessing `data.isInStock` will still return a `Promise` that will have to be
 > awaited.
 
-
 ## Additional points regarding computed
 
 **Note**: you don't need to know this stuff, but if you find that computed is not

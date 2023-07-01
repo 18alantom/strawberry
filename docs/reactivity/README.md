@@ -14,10 +14,17 @@ In the above example, when `data.message` is updated the inner text of the `<p>`
 element is also updated. This is due to Strawberry's reactivity, i.e.
 _when the data updates, update the UI_.
 
-Reactive depends on two things:
+Reactive depends on two things, what data is set/updated, and how the UI is to
+be updated. The reactivity section of the documentation has been divided as
+such:
 
-- _What data is set/updated_
-- _How the UI is to be updated_
+- **What data is set/updated**
+  1. [Reactive Values](./reactive_values.md)
+  2. [Computed](./computed.md)
+- **How the UI is to be updated**
+  1. [Mark (`sb-if`)](./mark.md)
+  2. [Conditionals (`sb-if`, `sb-ifnot`)](./mark.md)
+  3. [Directives](./directives.md)
 
 ## Setting and updating the data
 
@@ -33,8 +40,8 @@ means that any value that is set on `data` will update the appropriate UI.
 
 Data works with the following types of values:
 
-1. Regular objects. [documentation](reactive_values.md)
-2. Regular arrays. [documentation](reactive_values.md)
+1. Regular objects. [documentation](reactive_values.md#objects-and-arrays)
+2. Regular arrays for loops. [documentation](reactive_values.md#objects-and-arrays)
 3. Functions used for computed values. [documentation](computed.md)
 
 ## Updating the UI

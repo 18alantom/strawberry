@@ -8,11 +8,11 @@ Here's the documentation index:
 1. [Installation](./installation.md)
 2. [Getting Started](./getting_started.md)
 3. [Reactivity](./reactivity/README.md)
-   1. [Mark](./reactivity/mark.md)
-   2. [Conditionals](./reactivity/conditionals.md)
-   3. [Computed](./reactivity/computed.md)
-   4. [Directives](./reactivity/directives.md)
-   5. [Reactive Values](./reactivity/reactive_values.md)
+   1. [Reactive Values](./reactivity/reactive_values.md)
+   2. [Mark (`sb-mark`)](./reactivity/mark.md)
+   3. [Conditionals (`sb-if`, `sb-ifnot`)](./reactivity/conditionals.md)
+   4. [Computed](./reactivity/computed.md)
+   5. [Directives](./reactivity/directives.md)
 4. Composability (to be added)
 
 If you want to get a quick round up of Strawberry check the
