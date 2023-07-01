@@ -130,13 +130,116 @@
         'all children in ul1 after a=false and push are templates'
       );
 
-      /*
-      TODO:
-      - [ ] syncing of lists sb-if on list item
-      - [ ] syncing of lists sb-if on list parent
-      - [ ] syncing of lists sb-if uses list item
-      - [ ] syncing of nested conditionals
-       */
+      data.a = true;
+      test(
+        document.getElementById('ul1').childElementCount === 5,
+        '5 children in ul1'
+      );
+      test(
+        [...document.getElementById('ul1').children]
+          .slice(0, -1)
+          .every((ch) => ch instanceof HTMLLIElement),
+        'all but last child in ul1 after a=true and push are li'
+      );
+
+      document.getElementById('ul1').remove();
+    </script>
+
+    <ul id="ul2" sb-if="a">
+      <li sb-mark="li.#"></li>
+    </ul>
+
+    <script>
+      data.li = [];
+      data.a = true;
+      data.li.push('a');
+
+      data.a = false;
+      data.li.push('b');
+
+      data.a = true;
+      test(
+        document.getElementById('ul2').childElementCount === 3,
+        '3 children in ul2'
+      );
+      test(
+        [...document.getElementById('ul2').children]
+          .slice(0, -1)
+          .every((ch) => ch instanceof HTMLLIElement),
+        'all but last child in ul2 after a=true and push are li'
+      );
+
+      data.a = false;
+      data.li.splice(1, 0, 'x', 'y');
+
+      data.a = true;
+      test(
+        document.getElementById('ul2').childElementCount === 5,
+        '5 children in ul2'
+      );
+      test(
+        [...document.getElementById('ul2').children]
+          .slice(0, -1)
+          .every((ch) => ch instanceof HTMLLIElement),
+        'all but last child in ul2 after splice and a=true are li'
+      );
+      document.getElementById('ul2').remove();
+    </script>
+    <div id="div1">
+      <div sb-if="x">
+        <div sb-if="y">
+          <p sb-mark="z"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      data.x = true;
+      data.y = true;
+      data.z = 'z';
+      data.x = false;
+
+      const div1 = document.getElementById('div1');
+      test(div1.childElementCount === 1, 'div1 has one child');
+      test(
+        div1.children[0] instanceof HTMLTemplateElement,
+        'div1 has one template child'
+      );
+
+      data.x = true;
+      test(
+        div1.children[0] instanceof HTMLDivElement,
+        'div1 has one div child after x=true'
+      );
+
+      data.x = false;
+      data.y = false;
+      data.x = true;
+      test(
+        div1.children[0] instanceof HTMLDivElement,
+        'div1 has one div child after x=false y=false x=true'
+      );
+      test(
+        div1.children[0].children[0] instanceof HTMLTemplateElement,
+        'div1[0] has one template child after x=false y=false x=true'
+      );
+
+      data.x = false;
+      test(
+        div1.children[0] instanceof HTMLTemplateElement,
+        'div1 has template div child after x=false'
+      );
+
+      data.z = 'zz';
+      data.y = true;
+      data.x = true;
+      const nestedP = div1.children[0].children[0].children[0];
+      test(
+        nestedP instanceof HTMLParagraphElement,
+        'div1[0][0][0] is a p element'
+      );
+
+      test(nestedP.innerText === 'zz', 'div1[0][0][0] inner text is zz');
     </script>
   </body>
 </html>
