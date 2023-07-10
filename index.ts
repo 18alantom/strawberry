@@ -12,15 +12,13 @@ type DirectiveParams = {
 };
 type Directive = (params: DirectiveParams) => void;
 type BasicAttrs = 'mark' | 'if' | 'ifnot';
-type DependentMap = Record<
-  string,
-  {
-    key: string;
-    computed: Prefixed<Function>;
-    parent: Prefixed<object>;
-    prop: string;
-  }[]
->;
+type ComputedList = {
+  key: string;
+  computed: Prefixed<Function>;
+  parent: Prefixed<object>;
+  prop: string;
+}[];
+
 type SyncConfig = {
   directive: string;
   el: Element;
@@ -64,7 +62,7 @@ const globalDirectives = new Map<string, Directive>([
 const globalDeps = {
   isEvaluating: false,
   set: new Set<string>(),
-  map: {} as DependentMap,
+  map: new Map<string, ComputedList>(),
 };
 
 const attr = (k: BasicAttrs) => globalPrefix + k;
@@ -169,9 +167,11 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     const success = Reflect.deleteProperty(target, prop);
     this.update(undefined, key, true, target, prop);
 
-    delete globalDeps.map[key];
-    for (const k of Object.keys(globalDeps.map)) {
-      globalDeps.map[k] = globalDeps.map[k]?.filter((d) => d.key !== key) ?? [];
+    globalDeps.map.delete(key);
+    for (const k of globalDeps.map.keys()) {
+      const filtered =
+        globalDeps.map.get(k)?.filter((d) => d.key !== key) ?? [];
+      globalDeps.map.set(k, filtered);
     }
 
     return success;
@@ -199,11 +199,11 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
    * @param key period '.' separated key to the computed value's dep, used to track the computed value
    */
   static updateComputed(key: string) {
-    const dependentNames = Object.keys(globalDeps.map)
+    const dependentNames = [...globalDeps.map.keys()]
       .filter(
         (k) => k === key || k.startsWith(key + '.') || key.startsWith(k + '.')
       )
-      .flatMap((k) => globalDeps.map[k] ?? []);
+      .flatMap((k) => globalDeps.map.get(k) ?? []);
 
     const executed = new Set<Function>();
     for (const dep of dependentNames) {
@@ -262,7 +262,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
   }
 
   static callWatchers(value: unknown, key: string) {
-    for (const k of Object.keys(globalWatchers)) {
+    for (const k of globalWatchers.keys()) {
       if (key === k) {
         globalWatchers.get(k)?.forEach((cb) => cb(value));
       } else if (key.startsWith(k + '.') && globalData !== null) {
@@ -495,8 +495,11 @@ function setDependents(
   };
 
   for (const dep of globalDeps.set) {
-    globalDeps.map[dep] ??= [];
-    globalDeps.map[dep]!.push(dependent);
+    const computedList = globalDeps.map.get(dep) ?? [];
+    computedList.push(dependent);
+    if (!globalDeps.map.has(dep)) {
+      globalDeps.map.set(dep, computedList);
+    }
   }
 }
 
@@ -1161,32 +1164,6 @@ All of this convoluted code can be improved by refactoring to separate _insert,s
 and _set_ logic from one another.
   
 Another point to note is that objects being set also recursively call.
-
-
-## UI Update Defer
-
-If `sb.init` is called inside the head element. Then all directive execution
-is deferred, i.e. all UI updates such as when an RDO prop is set and the appropriate
-UI is updated is deferred.
-  
-These are then executed when the DOM content loads, i.e. on DOMContentLoaded.
-
-```html
-<!-- This P will be set. -->
-<p sb-mark="message"></p>
-<script>
-  data.message = "Hello, World!"
-</script>
-
-
-<!-- This P will be set only if `sb.init` is called inside head. -->
-<p sb-mark="message"></p>
-```
-
-If the `sb.init` is not placed in the head tag then all directives are executed
-immediately. In such a case it is better to place the setting of the RDO values after
-the `body` tag so that the appropriate elements are found.
-
 
 
 ## HTMLTemplateElement based Components
