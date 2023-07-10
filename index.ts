@@ -1110,7 +1110,6 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [x] Remove defer, defer can take place in async components.
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
