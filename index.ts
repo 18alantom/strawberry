@@ -28,8 +28,6 @@ type SyncConfig = {
   skipMark?: boolean | undefined;
 };
 
-let globalDefer: null | Parameters<typeof ReactivityHandler.callDirectives>[] =
-  null;
 let globalData: null | Prefixed<{}> = null;
 let globalPrefix = 'sb-';
 const globalDirectives = new Map<string, Directive>([
@@ -284,11 +282,6 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     skipUpdateArrayElements?: boolean,
     syncConfig?: SyncConfig
   ): void {
-    if (globalDefer) {
-      globalDefer.push([value, key, isDelete, parent, prop]);
-      return;
-    }
-
     const isParentArray = Array.isArray(parent);
     if (
       isParentArray &&
@@ -927,21 +920,12 @@ export function init(config?: {
   globalData ??= reactive({}, '') as {} & Meta;
   globalPrefix = config?.prefix ?? globalPrefix;
 
-  if (
-    document.currentScript?.parentElement instanceof HTMLHeadElement &&
-    document.readyState === 'loading' &&
-    globalDefer === null
-  ) {
-    globalDefer = [];
-  }
-
   for (const [name, directive] of Object.entries(config?.directives ?? {})) {
     globalDirectives.set(name, directive);
   }
 
   registerTemplates();
   document.addEventListener('readystatechange', readyStateChangeHandler);
-  document.addEventListener('DOMContentLoaded', executeDefered);
 
   return globalData;
 }
@@ -950,12 +934,6 @@ function readyStateChangeHandler() {
   if (document.readyState === 'interactive') {
     registerTemplates();
   }
-}
-
-function executeDefered() {
-  const deferQueue = globalDefer ?? [];
-  globalDefer = null; // Needs to be set before calling directives else recursion
-  deferQueue.forEach((params) => ReactivityHandler.callDirectives(...params));
 }
 
 /**
@@ -1132,7 +1110,7 @@ export function unwatch(key?: string, watcher?: Watcher) {
 # Scratch Space
 
 TODO:
-- [ ] Remove defer, defer can take place in async components.
+- [x] Remove defer, defer can take place in async components.
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
