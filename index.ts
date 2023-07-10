@@ -30,6 +30,7 @@ type SyncConfig = {
 
 let globalData: null | Prefixed<{}> = null;
 let globalPrefix = 'sb-';
+const globalWatchers = new Map<string, Watcher[]>();
 const globalDirectives = new Map<string, Directive>([
   [
     'mark',
@@ -113,7 +114,6 @@ function reactive<T>(
 }
 
 class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
-  static watchers: Record<string, Watcher[]> = {};
   static get(
     target: Prefixed<object>,
     prop: string | symbol,
@@ -262,12 +262,12 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
   }
 
   static callWatchers(value: unknown, key: string) {
-    for (const k of Object.keys(this.watchers)) {
+    for (const k of Object.keys(globalWatchers)) {
       if (key === k) {
-        this.watchers[k]?.forEach((cb) => cb(value));
+        globalWatchers.get(k)?.forEach((cb) => cb(value));
       } else if (key.startsWith(k + '.') && globalData !== null) {
         const { value } = getValue(k);
-        this.watchers[k]?.forEach((cb) => cb(value));
+        globalWatchers.get(k)?.forEach((cb) => cb(value));
       }
     }
   }
@@ -1086,23 +1086,27 @@ function registerComponent(template: HTMLTemplateElement) {
  * value is required then a `computed` value should be used.
  */
 export function watch(key: string, watcher: Watcher) {
-  ReactivityHandler.watchers[key] ??= [];
-  ReactivityHandler.watchers[key]!.push(watcher);
+  const watchers = globalWatchers.get(key) ?? [];
+  watchers.push(watcher);
+  if (!globalWatchers.has(key)) {
+    globalWatchers.set(key, watchers);
+  }
 }
 
 export function unwatch(key?: string, watcher?: Watcher) {
   if (!key) {
-    ReactivityHandler.watchers = {};
+    globalWatchers.clear();
     return;
   }
 
   if (!watcher) {
-    delete ReactivityHandler.watchers[key];
+    globalWatchers.delete(key);
     return;
   }
 
-  const watchers = ReactivityHandler.watchers[key] ?? [];
-  ReactivityHandler.watchers[key] = watchers.filter((w) => w !== watcher);
+  const watchers = globalWatchers.get(key) ?? [];
+  const filtered = watchers.filter((w) => w !== watcher);
+  globalWatchers.set(key, filtered);
 }
 
 /**
@@ -1113,7 +1117,7 @@ TODO:
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
-- [?] Change use of Records to Map (execution order of watchers, directives, computed)
+- [?] Change use of Records to Map (execution order of computed)
 - [ ] Performance
   - [ ] Cache computed
   - [^] Cache el references? (might not be required, 10ms for 1_000_000 divs querySelectorAll)
