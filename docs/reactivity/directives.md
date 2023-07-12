@@ -7,8 +7,8 @@ In Strawberry things (i.e. `x`) are done by using **directives**. For example:
 
 - `sb-mark` is a directive that sets the inner text of an element when the value in the RDO changes.
 - `sb-if` is a directive that inserts or removes an element depending on the truthy-ness of the value.
-    
-Directives can be used to extend the functionality of strawberry. 
+
+Directives can be used to extend the functionality of strawberry.
 
 ## Directive is a function
 
@@ -16,17 +16,27 @@ You can add all sorts of additional functionality to Strawberry by using
 directives. A directive is a function with the following signature:
 
 ```typescript
-
 type Directive = (params: DirectiveParams) => void;
 
 type DirectiveParams = {
-  el: Element,                     // Element on which the directive has been set.
-  value: unknown,                  // Updated value.
-  key: string,                     // Period '.' delimited key of the value in the RDO.
-  isDelete: boolean,               // Whether the value was deleted `delete data.prop`.
-  parent: Record<string, unknown>, // Parent object to which the value belongs (the proxied object).
-  prop: string                     // Property of the parent which points to the value `parent[prop] ≈ value`
-}
+  // Element on which the directive has been set.
+  el: Element;
+
+  // Updated value.
+  value: unknown;
+
+  // Period '.' delimited key of the value in the RDO.
+  key: string;
+
+  // Whether the value was deleted `delete data.prop`.
+  isDelete: boolean;
+
+  // Parent object to which the value belongs (the proxied object).
+  parent: Record<string, unknown>;
+
+  // Property of the parent which points to the value `parent[prop] ≈ value`
+  prop: string;
+};
 ```
 
 ## Directive is called on data change
@@ -38,17 +48,26 @@ For example, in `sb-mark="form.title"`, `form.title` is the key of a value in
 the RDO i.e. `data.form.title` and when this is set or changes or is deleted,
 the directive is called.
 
-## Directives can be registered
+## Directives can be registered using `sb.directive`
 
-To register a directive, you need to mention it in the `sb.init` config:
+```typescript
+sb.directive(
+  // Name of the directive
+  name: string,
+
+  // The callback function of the directive
+  cb: Directive,
+
+  // Whether the directive is parametric
+  isParametric: boolean
+): void;
+```
+
+To register a directive, you can use the `sb.directive` function.
 
 ```javascript
-const data = sb.init({
-  directives: {
-    somedirective: () => {
-      /*...*/
-    },
-  },
+sb.directive('somedirective', () => {
+  /* ... */
 });
 ```
 
@@ -91,15 +110,11 @@ should change.
 For this we'll write a simple directive called bind:
 
 ```javascript
-const data = sb.init({
-  directives: {
-    bind({el, value, parent, prop}) {
-      el.value = value;
-      el.oninput ??= (e) => {
-        parent[prop] = e.target.value;
-      };
-    },
-  },
+sb.directive('bind', ({ el, value, parent, prop }) => {
+  el.value = value;
+  el.oninput ??= (e) => {
+    parent[prop] = e.target.value;
+  };
 });
 ```
 
