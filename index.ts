@@ -369,13 +369,12 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
       const attrName = globalPrefix + attrSuffix;
       let query: string;
       if (isParametric) {
-        query = `[${attrName}$=':${key}']`;
+        query = `[${attrName}^='${key}:']`;
       } else {
         query = `[${attrName}='${key}']`;
       }
 
-      const els = searchRoot.querySelectorAll(query);
-      els.forEach((el) => {
+      searchRoot.querySelectorAll(query).forEach((el) => {
         const param = getParam(el, attrName, !!isParametric);
         cb({ el, value, key, isDelete, parent, prop, param });
       });
@@ -451,15 +450,19 @@ function syncDirectives(
   skipConditionals?: boolean,
   skipMark?: boolean
 ) {
-  for (const directive of globalDirectives.keys()) {
+  for (const [name, { isParametric }] of globalDirectives.entries()) {
     if (
-      (skipMark && directive === 'mark') ||
-      (skipConditionals && (directive === 'if' || directive === 'ifnot'))
+      (skipMark && name === 'mark') ||
+      (skipConditionals && (name === 'if' || name === 'ifnot'))
     ) {
       continue;
     }
 
-    let key = el.getAttribute(globalPrefix + directive);
+    let key = el.getAttribute(globalPrefix + name);
+    if (isParametric) {
+      key = key?.split(':')[0] ?? null;
+    }
+
     if (key?.endsWith('.#')) {
       key = key.slice(0, -2);
     }
@@ -474,7 +477,7 @@ function syncDirectives(
     }
 
     ReactivityHandler.update(value, key, false, parent, prop, {
-      directive,
+      directive: name,
       el,
       skipConditionals,
       skipMark,
@@ -870,11 +873,12 @@ function getKey(prop: string, prefix: string) {
 }
 
 function getParam(el: Element, attrName: string, isParametric: boolean) {
-  if (!isParametric) {
+  let value;
+  if (!isParametric || !(value = el.getAttribute(attrName))) {
     return undefined;
   }
 
-  return (el.getAttribute(attrName)?.split(':') ?? [])[0];
+  return value.slice(value.indexOf(':') + 1);
 }
 
 /**
