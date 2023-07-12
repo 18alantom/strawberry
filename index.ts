@@ -919,7 +919,20 @@ function runComputed(
 ) {
   const value = computed();
   if (value instanceof Promise) {
-    return value.then((v) => reactive(clone(v), key, parent, prop));
+    return value.then((v) => proxyComputed(v, key, parent, prop));
+  }
+
+  return proxyComputed(value, key, parent, prop);
+}
+
+function proxyComputed(
+  value: any,
+  key: string,
+  parent: Prefixed<object>,
+  prop: string
+) {
+  if (typeof value === 'function') {
+    return value;
   }
 
   return reactive(clone(value), key, parent, prop);
