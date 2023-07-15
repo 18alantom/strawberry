@@ -80,7 +80,7 @@ This can now be used like so:
 </script>
 ```
 
-## Two-way binding using a directive
+## Example: Two-way binding using a directive
 
 Let's implement _two-way binding_ by using directives.
 
@@ -169,3 +169,73 @@ update `data.name` both the `input` and the `span` values will change.
 >
 > In the `bind` example above since `parent[prop]` is set inside the input
 > listener, recursion does not take place.
+
+## Directives can have parameters
+
+Parametric directives are directives that can have parameters, it can be defined
+by passing `true` as the third arg of the `sb.directive` function:
+
+```javascript
+sb.directive(
+  'parametric',
+  ({ el, value, key, param }) => {
+    /* parametric directive logic */
+  },
+  true // registers directive as a parametric directive
+);
+```
+
+and then can be used like so:
+
+```html
+<p sb-parametric="directiveKey:directiveParameter"></p>
+<script>
+  sb.directiveKey = 'directiveValue';
+</script>
+```
+
+In the above example the directive call back function will receive the following values:
+
+```javascript
+{
+  el:    HTMLParagraphElement,
+  value: 'directiveValue',
+  key:   'directiveKey',
+  param: 'directiveParameter'
+}
+```
+
+## Example: Event listeners using a directive
+
+You can make use of parametric directives to create a generic directive that
+attaches an event listeners to an element.
+
+Here we'll use the parameter to store the event name.
+
+```javascript
+sb.directive(
+  'listen',
+  ({ el, value, param }) => {
+    el.addEventListener(param, value);
+  },
+  true
+);
+```
+
+We can now set this directive on an element:
+
+```html
+<button sb-listen="clicHandler:click">Click</button>
+
+<script>
+  data.clickHandler = () => () => console.log('button clicked');
+</script>
+```
+
+> **Info**
+>
+> Here we're using a computed function that returns a function, these aren't
+> executed by strawberry and so will be passed to the directive as a value.
+>
+> Check the computed [documentation](./computed.md#function-can-be-returned-from-computed-functions)
+> for more info.

@@ -114,6 +114,23 @@ data.users[0].isOldEnough; // false
 data.users[1].isOldEnough; // true
 ```
 
+## Function can be returned from computed functions
+
+If your computed function returns a function then it is returned as it is.
+
+```javascript
+function onClickHandler() {
+  /* event listener logic*/
+}
+
+data.handler = () => onClickHandler;
+
+typeof data.handler === 'function' // evaluates to true
+```
+
+This is useful for associating a function with an element. For instance by
+creating a custom directive to assign event listeners to elements.
+
 ## Computed functions can be `async`
 
 If your computed function depends on pulling data from some async source you
