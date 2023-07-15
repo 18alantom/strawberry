@@ -9,6 +9,7 @@ type DirectiveParams = {
   isDelete: boolean; // Whether the value was deleted `delete data.prop`.
   parent: Prefixed<object>; // The parent object to which the value belongs (the proxied object, unless isDelete).
   prop: string; // Property of the parent which points to the value, `parent[prop] ≈ value`
+  param: string | undefined; // If directive is a parametric directive, `param` is passed
 };
 type Directive = (params: DirectiveParams) => void;
 type BasicAttrs = 'mark' | 'if' | 'ifnot';
@@ -26,31 +27,38 @@ type SyncConfig = {
   skipMark?: boolean | undefined;
 };
 
+const DONT_CALL = '__sb_dontcall';
+
 let globalData: null | Prefixed<{}> = null;
 let globalPrefix = 'sb-';
 const globalWatchers = new Map<string, Watcher[]>();
-const globalDirectives = new Map<string, Directive>([
+const globalDirectives = new Map<
+  string,
+  { cb: Directive; isParametric?: boolean }
+>([
   [
     'mark',
-    ({ el, value, isDelete }) => {
-      if (isDelete) {
-        return remove(el);
-      }
+    {
+      cb: ({ el, value, isDelete }) => {
+        if (isDelete) {
+          return remove(el);
+        }
 
-      if (!(el instanceof HTMLElement)) {
-        return;
-      }
+        if (!(el instanceof HTMLElement)) {
+          return;
+        }
 
-      if (typeof value === 'object' && value !== null) {
-        value = JSON.stringify(value);
-      }
+        if (typeof value === 'object' && value !== null) {
+          value = JSON.stringify(value);
+        }
 
-      const stringValue = typeof value === 'string' ? value : String(value);
-      el.innerText = stringValue;
+        const stringValue = typeof value === 'string' ? value : String(value);
+        el.innerText = stringValue;
+      },
     },
   ],
-  ['if', ({ el, value, key }) => ifOrIfNot(el, value, key, 'if')],
-  ['ifnot', ({ el, value, key }) => ifOrIfNot(el, value, key, 'ifnot')],
+  ['if', { cb: ({ el, value, key }) => ifOrIfNot(el, value, key, 'if') }],
+  ['ifnot', { cb: ({ el, value, key }) => ifOrIfNot(el, value, key, 'ifnot') }],
 ]);
 
 /**
@@ -129,9 +137,9 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     if (typeof value === 'function' && value.__sb_prefix) {
       const computed = value();
       if (computed instanceof Promise) {
-        return computed.then((v) => clone(v));
+        return computed.then((v) => proxyComputed(v));
       }
-      return clone(computed);
+      return proxyComputed(computed);
     }
 
     return value;
@@ -235,7 +243,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     prop: string,
     syncConfig?: SyncConfig
   ) {
-    if (typeof value === 'function') {
+    if (typeof value === 'function' && !value.hasOwnProperty(DONT_CALL)) {
       value = runComputed(value, key, parent, prop);
     }
 
@@ -350,24 +358,35 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     }
 
     if (syncConfig) {
-      const directive = globalDirectives.get(syncConfig.directive);
-      directive?.({ el: syncConfig.el, value, key, isDelete, parent, prop });
+      const { el, directive: attrSuffix } = syncConfig;
+      const { cb, isParametric } = globalDirectives.get(attrSuffix) ?? {};
+      const param = getParam(el, globalPrefix + attrSuffix, !!isParametric);
+      cb?.({ el: el, value, key, isDelete, parent, prop, param });
       return;
     }
 
     searchRoot ??= document;
     for (const [attrSuffix, directive] of globalDirectives.entries()) {
+      const { cb, isParametric } = directive;
       const attrName = globalPrefix + attrSuffix;
-      const els = searchRoot.querySelectorAll(`[${attrName}='${key}']`);
-      els.forEach((el) =>
-        directive({ el, value, key, isDelete, parent, prop })
-      );
+      let query: string;
+      if (isParametric) {
+        query = `[${attrName}^='${key}:']`;
+      } else {
+        query = `[${attrName}='${key}']`;
+      }
+
+      searchRoot.querySelectorAll(query).forEach((el) => {
+        const param = getParam(el, attrName, !!isParametric);
+        cb({ el, value, key, isDelete, parent, prop, param });
+      });
 
       if (
         searchRoot instanceof Element &&
         searchRoot.getAttribute(attrName) === key
       ) {
-        directive({ el: searchRoot, value, key, isDelete, parent, prop });
+        const param = getParam(searchRoot, attrName, !!isParametric);
+        cb({ el: searchRoot, value, key, isDelete, parent, prop, param });
       }
     }
   }
@@ -433,15 +452,19 @@ function syncDirectives(
   skipConditionals?: boolean,
   skipMark?: boolean
 ) {
-  for (const directive of globalDirectives.keys()) {
+  for (const [name, { isParametric }] of globalDirectives.entries()) {
     if (
-      (skipMark && directive === 'mark') ||
-      (skipConditionals && (directive === 'if' || directive === 'ifnot'))
+      (skipMark && name === 'mark') ||
+      (skipConditionals && (name === 'if' || name === 'ifnot'))
     ) {
       continue;
     }
 
-    let key = el.getAttribute(globalPrefix + directive);
+    let key = el.getAttribute(globalPrefix + name);
+    if (isParametric) {
+      key = key?.split(':')[0] ?? null;
+    }
+
     if (key?.endsWith('.#')) {
       key = key.slice(0, -2);
     }
@@ -456,7 +479,7 @@ function syncDirectives(
     }
 
     ReactivityHandler.update(value, key, false, parent, prop, {
-      directive,
+      directive: name,
       el,
       skipConditionals,
       skipMark,
@@ -851,6 +874,15 @@ function getKey(prop: string, prefix: string) {
   return prefix === '' ? prop : prefix + '.' + prop;
 }
 
+function getParam(el: Element, attrName: string, isParametric: boolean) {
+  let value;
+  if (!isParametric || !(value = el.getAttribute(attrName))) {
+    return undefined;
+  }
+
+  return value.slice(value.indexOf(':') + 1);
+}
+
 /**
  * Function gets a value from the `globalData` object when passed a '.' separated
  * key. Also returns the `parent` object containing the `value` and the `prop` of
@@ -889,7 +921,25 @@ function runComputed(
 ) {
   const value = computed();
   if (value instanceof Promise) {
-    return value.then((v) => reactive(clone(v), key, parent, prop));
+    return value.then((v) => proxyComputed(v, key, parent, prop));
+  }
+
+  return proxyComputed(value, key, parent, prop);
+}
+
+function proxyComputed(
+  value: any,
+  key?: string,
+  parent?: Prefixed<object>,
+  prop?: string
+) {
+  if (typeof value === 'function') {
+    value[DONT_CALL] = true;
+    return value;
+  }
+
+  if (key === undefined || parent === undefined || prop === undefined) {
+    return clone(value);
   }
 
   return reactive(clone(value), key, parent, prop);
@@ -914,18 +964,37 @@ function clone<T>(target: T): T {
  */
 
 /**
+ * Used to override the global prefix value.
+ * @param prefix string value for the prefix eg: 'data-sb'
+ */
+export function prefix(prefix: string = 'sb') {
+  if (!prefix.endsWith('-')) {
+    prefix = prefix + '-';
+  }
+  globalPrefix = prefix;
+}
+
+/**
+ * Used to register a directive.
+ * @param name name of the directive
+ * @param cb the directive callback
+ * @param isParametric whether the directive is a parametric directive
+ */
+export function directive(
+  name: string,
+  cb: Directive,
+  isParametric: boolean = false
+) {
+  if (!globalDirectives.has(name)) {
+    globalDirectives.set(name, { cb, isParametric });
+  }
+}
+
+/**
  * Initializes strawberry and returns the reactive object.
  */
-export function init(config?: {
-  prefix?: string;
-  directives?: Record<string, Directive>;
-}) {
+export function init() {
   globalData ??= reactive({}, '') as {} & Meta;
-  globalPrefix = config?.prefix ?? globalPrefix;
-
-  for (const [name, directive] of Object.entries(config?.directives ?? {})) {
-    globalDirectives.set(name, directive);
-  }
 
   registerTemplates();
   document.addEventListener('readystatechange', readyStateChangeHandler);

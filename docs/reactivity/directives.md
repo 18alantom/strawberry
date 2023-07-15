@@ -7,8 +7,8 @@ In Strawberry things (i.e. `x`) are done by using **directives**. For example:
 
 - `sb-mark` is a directive that sets the inner text of an element when the value in the RDO changes.
 - `sb-if` is a directive that inserts or removes an element depending on the truthy-ness of the value.
-    
-Directives can be used to extend the functionality of strawberry. 
+
+Directives can be used to extend the functionality of strawberry.
 
 ## Directive is a function
 
@@ -16,17 +16,27 @@ You can add all sorts of additional functionality to Strawberry by using
 directives. A directive is a function with the following signature:
 
 ```typescript
-
 type Directive = (params: DirectiveParams) => void;
 
 type DirectiveParams = {
-  el: Element,                     // Element on which the directive has been set.
-  value: unknown,                  // Updated value.
-  key: string,                     // Period '.' delimited key of the value in the RDO.
-  isDelete: boolean,               // Whether the value was deleted `delete data.prop`.
-  parent: Record<string, unknown>, // Parent object to which the value belongs (the proxied object).
-  prop: string                     // Property of the parent which points to the value `parent[prop] ≈ value`
-}
+  // Element on which the directive has been set.
+  el: Element;
+
+  // Updated value.
+  value: unknown;
+
+  // Period '.' delimited key of the value in the RDO.
+  key: string;
+
+  // Whether the value was deleted `delete data.prop`.
+  isDelete: boolean;
+
+  // Parent object to which the value belongs (the proxied object).
+  parent: Record<string, unknown>;
+
+  // Property of the parent which points to the value `parent[prop] ≈ value`
+  prop: string;
+};
 ```
 
 ## Directive is called on data change
@@ -38,17 +48,26 @@ For example, in `sb-mark="form.title"`, `form.title` is the key of a value in
 the RDO i.e. `data.form.title` and when this is set or changes or is deleted,
 the directive is called.
 
-## Directives can be registered
+## Directives can be registered using `sb.directive`
 
-To register a directive, you need to mention it in the `sb.init` config:
+```typescript
+sb.directive(
+  // Name of the directive
+  name: string,
+
+  // The callback function of the directive
+  cb: Directive,
+
+  // Whether the directive is parametric
+  isParametric: boolean
+): void;
+```
+
+To register a directive, you can use the `sb.directive` function.
 
 ```javascript
-const data = sb.init({
-  directives: {
-    somedirective: () => {
-      /*...*/
-    },
-  },
+sb.directive('somedirective', () => {
+  /* ... */
 });
 ```
 
@@ -61,7 +80,7 @@ This can now be used like so:
 </script>
 ```
 
-## Two-way binding using a directive
+## Example: Two-way binding using a directive
 
 Let's implement _two-way binding_ by using directives.
 
@@ -91,15 +110,11 @@ should change.
 For this we'll write a simple directive called bind:
 
 ```javascript
-const data = sb.init({
-  directives: {
-    bind({el, value, parent, prop}) {
-      el.value = value;
-      el.oninput ??= (e) => {
-        parent[prop] = e.target.value;
-      };
-    },
-  },
+sb.directive('bind', ({ el, value, parent, prop }) => {
+  el.value = value;
+  el.oninput ??= (e) => {
+    parent[prop] = e.target.value;
+  };
 });
 ```
 
@@ -154,3 +169,73 @@ update `data.name` both the `input` and the `span` values will change.
 >
 > In the `bind` example above since `parent[prop]` is set inside the input
 > listener, recursion does not take place.
+
+## Directives can have parameters
+
+Parametric directives are directives that can have parameters, it can be defined
+by passing `true` as the third arg of the `sb.directive` function:
+
+```javascript
+sb.directive(
+  'parametric',
+  ({ el, value, key, param }) => {
+    /* parametric directive logic */
+  },
+  true // registers directive as a parametric directive
+);
+```
+
+and then can be used like so:
+
+```html
+<p sb-parametric="directiveKey:directiveParameter"></p>
+<script>
+  sb.directiveKey = 'directiveValue';
+</script>
+```
+
+In the above example the directive call back function will receive the following values:
+
+```javascript
+{
+  el:    HTMLParagraphElement,
+  value: 'directiveValue',
+  key:   'directiveKey',
+  param: 'directiveParameter'
+}
+```
+
+## Example: Event listeners using a directive
+
+You can make use of parametric directives to create a generic directive that
+attaches an event listeners to an element.
+
+Here we'll use the parameter to store the event name.
+
+```javascript
+sb.directive(
+  'listen',
+  ({ el, value, param }) => {
+    el.addEventListener(param, value);
+  },
+  true
+);
+```
+
+We can now set this directive on an element:
+
+```html
+<button sb-listen="clicHandler:click">Click</button>
+
+<script>
+  data.clickHandler = () => () => console.log('button clicked');
+</script>
+```
+
+> **Info**
+>
+> Here we're using a computed function that returns a function, these aren't
+> executed by strawberry and so will be passed to the directive as a value.
+>
+> Check the computed [documentation](./computed.md#function-can-be-returned-from-computed-functions)
+> for more info.
