@@ -27,6 +27,8 @@ type SyncConfig = {
   skipMark?: boolean | undefined;
 };
 
+const DONT_CALL = '__sb_dontcall';
+
 let globalData: null | Prefixed<{}> = null;
 let globalPrefix = 'sb-';
 const globalWatchers = new Map<string, Watcher[]>();
@@ -135,9 +137,9 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     if (typeof value === 'function' && value.__sb_prefix) {
       const computed = value();
       if (computed instanceof Promise) {
-        return computed.then((v) => clone(v));
+        return computed.then((v) => proxyComputed(v));
       }
-      return clone(computed);
+      return proxyComputed(computed);
     }
 
     return value;
@@ -241,7 +243,7 @@ class ReactivityHandler implements ProxyHandler<Prefixed<object>> {
     prop: string,
     syncConfig?: SyncConfig
   ) {
-    if (typeof value === 'function') {
+    if (typeof value === 'function' && !value.hasOwnProperty(DONT_CALL)) {
       value = runComputed(value, key, parent, prop);
     }
 
@@ -927,12 +929,17 @@ function runComputed(
 
 function proxyComputed(
   value: any,
-  key: string,
-  parent: Prefixed<object>,
-  prop: string
+  key?: string,
+  parent?: Prefixed<object>,
+  prop?: string
 ) {
   if (typeof value === 'function') {
+    value[DONT_CALL] = true;
     return value;
+  }
+
+  if (key === undefined || parent === undefined || prop === undefined) {
+    return clone(value);
   }
 
   return reactive(clone(value), key, parent, prop);

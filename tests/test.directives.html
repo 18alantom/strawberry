@@ -8,9 +8,6 @@
     <script src="../index.js"></script>
     <link rel="stylesheet" href="test.css" />
     <script src="./test.js"></script>
-    <script type="module">
-      const data = sb.init();
-    </script>
   </head>
   <body>
     <main>
@@ -21,5 +18,91 @@
         <p>Total: <span id="total">0</span></p>
       </div>
     </main>
+
+    <script>
+      let idx = 0;
+
+      sb.directive('test', ({ value }) => {
+        test(value === 'test_x', 'test value is test_x');
+        idx += 1;
+      });
+    </script>
+    <p sb-test="x"></p>
+    <script>
+      const data = sb.init();
+      test(idx === 0, 'test directive has not run');
+      data.x = 'test_x';
+      test(idx === 1, 'test directive has run (1)');
+
+      sb.directive(
+        'testparam',
+        ({ key, value, param }) => {
+          test(key === 'y', 'key is y');
+          test(param === 'param-y', 'param value is param-y');
+          test(value === 'test_y', 'testparam directive is param-y');
+          idx += 1;
+        },
+        true
+      );
+    </script>
+
+    <p sb-testparam="y:param-y"></p>
+    <script>
+      data.y = 'test_y';
+      test(idx === 2, 'testparam directive has run (2)');
+
+      sb.directive(
+        'testloop',
+        ({ key, el, value, param }) => {
+          const mark = el.getAttribute('sb-mark');
+          if (mark.endsWith('.#')) {
+            return;
+          }
+          test(key === 'z', 'key is z');
+          test(/\.\d+$/.test(mark), 'mark key is a number');
+          test(value === 'test_z', 'loop test run');
+          test(param === 'param-z', 'param value is param-z');
+          idx += 1;
+        },
+        true
+      );
+    </script>
+
+    <div><p sb-mark="list.#" sb-testloop="z:param-z"></p></div>
+    <script>
+      data.z = 'test_z';
+      data.list = [1, 2];
+      test(idx === 4, 'testloop directive has run (4)');
+
+      data.list.push(3);
+      test(idx === 5, 'testloop directive has run (5)');
+      data.list = [];
+
+      sb.directive(
+        'testcond',
+        ({ key, value, param }) => {
+          test(key === 'w', 'key is w');
+          test(param === 'param-w', 'param value is param-w');
+          test(typeof value === 'function', 'value is a function');
+          test(value() === 'test_w', 'value returned test_w');
+          idx += 1;
+        },
+        true
+      );
+    </script>
+    <template sb-if="a">
+      <p sb-testcond="w:param-w"></p>
+    </template>
+    <script>
+      data.w = () => () => 'test_w';
+      test(idx === 5, 'testcond directive has not run (5)');
+      data.a = true;
+      test(idx === 6, 'testcond directive has run (6)');
+
+      data.a = false;
+      test(idx === 6, 'testcond directive has not run (6)');
+      data.a = true;
+      test(idx === 7, 'testcond directive has not run (7)');
+    </script>
   </body>
 </html>
