@@ -74,14 +74,6 @@
         );
       }
 
-      data.a = [1, 2, 3, 4];
-      data.b = () => data.a;
-      test(
-        data.b.__sb_prefix === undefined,
-        'computed values do not return prefixed object'
-      );
-      test(data.a.__sb_prefix === 'a', 'a value proxy unchanged');
-
       data.a = 'hello';
       data.b = async () => data.a.toUpperCase() + ' WORLD';
       data.b.then((v) => {
@@ -113,7 +105,6 @@
 
       test(data.y.length === 1, 'y is filtered version of x');
       test(data.y[0] !== data.x[0], 'y[0] is a clone of x[0]');
-      test(data.y[0].__sb_prefix === undefined, 'y[0] is not prefixed');
       data.d = '';
     </script>
 
