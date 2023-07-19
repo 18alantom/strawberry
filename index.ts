@@ -892,7 +892,7 @@ function getParam(el: Element, attrName: string, isParametric: boolean) {
  *
  * @param key period '.' separated key to a value in the reactive `globalData`
  */
-export function getValue(key: string) {
+function getValue(key: string) {
   let parent = globalData;
   let value: unknown = undefined;
   let prop: string = '';
@@ -967,13 +967,13 @@ function clone<T>(target: T): T {
 
 /**
  * Used to override the global prefix value.
- * @param prefix string value for the prefix eg: 'data-sb'
+ * @param value string value for the prefix eg: 'data-sb'
  */
-export function prefix(prefix: string = 'sb') {
-  if (!prefix.endsWith('-')) {
-    prefix = prefix + '-';
+export function prefix(value: string = 'sb'): void {
+  if (!value.endsWith('-')) {
+    value = value + '-';
   }
-  globalPrefix = prefix;
+  globalPrefix = value;
 }
 
 /**
@@ -986,7 +986,7 @@ export function directive(
   name: string,
   cb: Directive,
   isParametric: boolean = false
-) {
+): void {
   if (!globalDirectives.has(name)) {
     globalDirectives.set(name, { cb, isParametric });
   }
@@ -995,7 +995,7 @@ export function directive(
 /**
  * Initializes strawberry and returns the reactive object.
  */
-export function init() {
+export function init(): Meta {
   globalData ??= reactive({}, '') as {} & Meta;
 
   registerTemplates();
@@ -1014,7 +1014,7 @@ function readyStateChangeHandler() {
  * Loads templates from external files. Relative paths
  * should be provided for loading.
  */
-export async function load(files: string | string[]) {
+export async function load(files: string | string[]): Promise<void> {
   if (typeof files === 'string') {
     files = [files];
   }
@@ -1159,7 +1159,7 @@ function registerComponent(template: HTMLTemplateElement) {
  * watchers should not alter the reactive object. If a dependent
  * value is required then a `computed` value should be used.
  */
-export function watch(key: string, watcher: Watcher) {
+export function watch(key: string, watcher: Watcher): void {
   const watchers = globalWatchers.get(key) ?? [];
   watchers.push(watcher);
   if (!globalWatchers.has(key)) {
@@ -1167,20 +1167,30 @@ export function watch(key: string, watcher: Watcher) {
   }
 }
 
-export function unwatch(key?: string, watcher?: Watcher) {
-  if (!key) {
+export function unwatch(key?: string, watcher?: Watcher): void {
+  if (!key && !watcher) {
     globalWatchers.clear();
     return;
   }
 
-  if (!watcher) {
+  if (!watcher && key) {
     globalWatchers.delete(key);
     return;
   }
 
-  const watchers = globalWatchers.get(key) ?? [];
-  const filtered = watchers.filter((w) => w !== watcher);
-  globalWatchers.set(key, filtered);
+  let watcherList:
+    | [string, Watcher[]][]
+    | ReturnType<(typeof globalWatchers)['entries']>;
+  if (key) {
+    watcherList = [[key, globalWatchers.get(key) ?? []]];
+  } else {
+    watcherList = globalWatchers.entries();
+  }
+
+  for (const [key, watchers] of watcherList) {
+    const filtered = watchers.filter((w) => w !== watcher);
+    globalWatchers.set(key, filtered);
+  }
 }
 
 /**
@@ -1191,7 +1201,6 @@ TODO:
 - [ ] Remove need to apply names on slot elements (if slot names are mark names).
 - [ ] Review the code, take note of implementation and hacks
 - [ ] DOM Thrashing?
-- [?] Change use of Records to Map (execution order of computed)
 - [ ] Performance
   - [ ] Cache computed
   - [^] Cache el references? (might not be required, 10ms for 1_000_000 divs querySelectorAll)
