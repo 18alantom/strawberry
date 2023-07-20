@@ -59,6 +59,19 @@ the website.
 
 </div>
 
+**Documentation Index**
+
+1. [Installation](./docs/installation.md): explains how to pull Strawberry code into your web project.
+2. [Getting Started](./docs/getting_started.md): describes a simple example with code walk through.
+3. [Reactivity](./docs/reactivity/README.md): explains what is reactivity in Strawberry.
+   1. [Reactive Values](./docs/reactivity/reactive_values.md): explains keys and values of the reactive object.
+   2. [Mark (`sb-mark`)](./docs/reactivity/mark.md): explains how to mark an element to update along with data.
+   3. [Conditionals (`sb-if`, `sb-ifnot`)](./docs/reactivity/conditionals.md): explains how to render or hide an element when data changes to truthy or falsy.
+   4. [Computed](./docs/reactivity/computed.md): explains how to define reactive values that depend on other reactive values.
+   5. [Directives](./docs/reactivity/directives.md): explains how to extend Strawberry with custom directives.
+4. Composability (to be added)
+5. [API](./docs/api.md): lists all of Strawberry's defined directives and methods.
+
 ## Installation
 
 If you wanna try it out, then run this 👇 command to setup a simple _starter_ page.
