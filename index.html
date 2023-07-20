@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="normal" />
+    <meta name="theme-color" content="#342f3a" />
+
+    <!-- Regular Meta Tags -->
+    <meta
+      name="name"
+      content="Strawberry - Zero-Dependency, Build-Free JavaScript Framework"
+    />
+    <meta
+      name="title"
+      content="Strawberry - Zero-Dependency, Build-Free JavaScript Framework"
+    />
+    <meta
+      name="description"
+      content="Zero-dependency, build-free JavaScript framework for the artisanal web."
+    />
+    <meta name="image" content="https://strawberry.quest/assets/banner.png" />
+    <meta name="language" content="en-US" />
+
+    <!-- OG Meta Tags -->
+    <meta
+      property="og:title"
+      content="Strawberry - Zero-Dependency, Build-Free JavaScript Framework"
+    />
+    <meta
+      property="og:description"
+      content="Zero-dependency, build-free JavaScript framework for the artisanal web."
+    />
+    <meta
+      property="og:image"
+      content="https://strawberry.quest/assets/banner.png"
+    />
+
+    <!-- Twitter Meta Tags -->
+    <meta
+      name="twitter:title"
+      content="Strawberry - Zero-Dependency, Build-Free JavaScript Framework"
+    />
+    <meta
+      name="twitter:description"
+      content="Zero-dependency, build-free JavaScript framework for the artisanal web."
+    />
+    <meta
+      name="twitter:image"
+      content="https://strawberry.quest/assets/banner.png"
+    />
+    <meta name="twitter:site" content="@18alantom" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <title>Strawberry - Zero-Dependency, Build-Free JavaScript Framework</title>
+    <link rel="shortcut icon" href="assets/sb.png" />
+    <link rel="stylesheet" href="assets/index.css" />
+
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="assets/fonts/press-start-2p-latin.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="assets/fonts/vt323-latin.woff2"
+      crossorigin
+    />
+    <link rel="preload" as="image" href="assets/sb.png" />
+    <link
+      rel="preload"
+      as="image"
+      type="image/svg+xml"
+      href="assets/grid.svg"
+    />
+
+    <!-- Loading Highlight JS and Example Manager -->
+    <script id="hl-script" src="highlight.min.js" async></script>
+    <script src="index.js" async></script>
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <a
+        href="https://www.pixilart.com/art/strawberry-sr27182e5bff14b"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <div id="banner"></div>
+      </a>
+      <h1>Strawberry</h1>
+      <p>Zero-dependency, build-free framework for the artisanal web.</p>
+    </header>
+
+    <!-- Lead-in Section -->
+    <section id="leadin">
+      <p>
+        Strawberry is a tiny frontend framework that gives you reactivity and
+        composability. It does this with zero-dependencies, without a build
+        step, and it fits in less than 4KB when gzipped.
+      </p>
+    </section>
+
+    <pre
+      id="simple-example"
+    ><code class="copy hljs nohighlight" data-copy="Copy"><span class="hljs-comment">&lt;!-- Define Components --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"plum-p"</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">style</span>=<span class="hljs-string">"color: plum"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">slot</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+
+<span class="hljs-comment">&lt;!-- Initialize Strawberry --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="language-javascript">
+  <span class="hljs-keyword">const</span> data = sb.<span class="hljs-title function_">init</span>();
+</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+
+<span class="hljs-comment">&lt;!-- Use Components --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">plum-p</span> <span class="hljs-attr">sb-mark</span>=<span class="hljs-string">"message"</span>&gt;</span>
+  A plum colored p element!
+<span class="hljs-tag">&lt;/<span class="hljs-name">plum-p</span>&gt;</span>
+
+<span class="hljs-comment">&lt;!-- Dynamically Update Components --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="language-javascript">
+  data.<span class="hljs-property">message</span> = <span class="hljs-string">'Hello, World!'</span>;
+</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span></code></pre>
+
+    <!-- Nav Bar -->
+    <nav class="navbar">
+      <a
+        href="https://github.com/18alantom/strawberry"
+        target="_blank"
+        rel="noreferrer"
+        >Github</a
+      >
+      <a
+        href="https://github.com/18alantom/strawberry/tree/main/docs"
+        target="_blank"
+        rel="noreferrer"
+        >Docs</a
+      >
+    </nav>
+
+    <section id="usecase" class="blank-block">
+      <p>
+        Strawberry is <em>not</em> an alternative to React, Vue, etc. It is an
+        alternative to Vanilla JS. It is meant for simple, long lasting, low
+        maintenance web pages, and <em>tiny</em> web apps.
+      </p>
+    </section>
+
+    <!-- Basic Setup -->
+    <section id="setup" class="block">
+      <h2>Basic Setup</h2>
+      <p>For a basic setup, run this command in your terminal:</p>
+      <pre><code class="copy hljs nohighlight" data-copy="Copy"><span class="hljs-keyword">curl</span> <span class="hljs-property">-so-</span> https://raw.githubusercontent.com/18alantom/strawberry/main/setup.sh <span class="hljs-meta">|</span> <span class="hljs-keyword">bash</span></code></pre>
+      <p>
+        This will download and run a
+        <a
+          href="https://github.com/18alantom/strawberry/blob/main/setup.sh"
+          target="_blank"
+          rel="noreferrer"
+          >shell script</a
+        >
+        that creates a folder with two files, <code>index.html</code> and
+        <code>sb.min.js</code> which consists of a simple "Hello, World!"
+        program using Strawberry.
+      </p>
+      <p>
+        To verify that setup succeeded, run the created
+        <code>index.html</code> file and check the console for the
+        <code>window.sb</code> object.
+      </p>
+    </section>
+
+    <section class="blank-block">
+      <p>
+        The ideal way of using Strawberry is by copying the source code into
+        your project directory as opposed to linking it.
+      </p>
+      <p>But if you want to use a link, you can :)</p>
+    </section>
+
+    <!-- Setup -->
+    <section id="setup" class="block">
+      <h2>Link Setup</h2>
+      <p>
+        To use a link, copy and paste the following script tag at the top of
+        your <code>index.html</code>:
+      </p>
+      <pre><code class="copy hljs nohighlight" data-copy="Copy"><span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://unpkg.com/sberry@0.0.3-alpha.0/dist/sb.min.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span></code></pre>
+      <p>
+        Once that is done the <code>window.sb</code> object should be defined.
+      </p>
+    </section>
+
+    <div class="sb-break" id="inventory-example">
+      <hr />
+      <img src="assets/sb.png" />
+      <hr />
+    </div>
+
+    <section class="blank-block">
+      <p>
+        Here's a toy example using Strawberry. An inventory app in which you can
+        add items, move them in and out of a store, and view the movements.
+      </p>
+    </section>
+
+    <!-- Inventory Example -->
+    <div class="toggle">
+      <div id="screen">
+        <!-- Display -->
+        <div id="view" class="codeblock" data-tab="view"></div>
+        <!-- Head Element Editor -->
+        <div class="codeblock" id="head" style="display: none" data-tab="head">
+          <pre><code style="cursor: pointer" class="language-html"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Templates Editor -->
+        <div
+          class="codeblock"
+          id="templates"
+          style="display: none"
+          data-tab="templates"
+        >
+          <pre><code style="cursor: pointer" class="language-html"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Body Element Editor -->
+        <div class="codeblock" id="body" style="display: none" data-tab="body">
+          <pre><code style="cursor: pointer" class="language-html"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Script Element Editor -->
+        <div
+          class="codeblock"
+          id="script"
+          style="display: none"
+          data-tab="script"
+        >
+          <pre><code style="cursor: pointer; " class="language-javascript"></code></pre>
+          <textarea spellcheck="false" style="display: none"></textarea>
+        </div>
+
+        <!-- Consolidated HTML Viewer -->
+        <div class="codeblock" id="html" style="display: none" data-tab="html">
+          <pre><code class="language-html"></code></pre>
+        </div>
+      </div>
+
+      <div id="buttons">
+        <div id="tabs">
+          <button data-tab="view" data-active="true">View</button>
+          <button data-tab="head">Head</button>
+          <button data-tab="templates">Templates</button>
+          <button data-tab="body">Body</button>
+          <button data-tab="script">Script</button>
+          <button data-tab="html">HTML</button>
+        </div>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+
+    <section class="blank-block">
+      <p>
+        Click the buttons in the bottom bar to view the different parts of the
+        page.
+      </p>
+      <ul>
+        <li><b>Head</b>: contains styles and a script to link Strawberry.</li>
+        <li>
+          <b>Templates</b>: contains templates for inventory list (blue) item
+          and movement item (dark-blue)
+        </li>
+        <li><b>Body</b>: contains the markup of the app.</li>
+        <li>
+          <b>Script</b>: contains Strawberry code, "business logic", click
+          handlers, and demo data.
+        </li>
+        <li>
+          <b>HTML</b>: contains HTML created by consolidating the other parts.
+          This is used to run the app (and is a readonly view).
+        </li>
+      </ul>
+      <p>
+        Clicking the code will allow you to edit it in a
+        <code>textarea</code>, switching back to "View" will allow you to see
+        your changes.
+      </p>
+    </section>
+
+    <div class="sb-break">
+      <hr />
+      <img src="assets/sb.png" />
+      <hr />
+    </div>
+
+    <!-- Why -->
+    <section id="why" class="blank-block">
+      <blockquote>Why did you make this?</blockquote>
+      <p>I wanted to write a simple website.</p>
+      <p>
+        I restrained myself from using the usual frontend frameworks; for my
+        purpose, their murder of dependencies felt like gross computational
+        opulence.
+      </p>
+      <p>
+        These previously, on annual re-visitation, instead of showing me my
+        website after an innocuous <code>yarn build</code>, have sprawled my
+        terminal with scary red text; portent of wasted hours.
+      </p>
+      <blockquote>If it ran then. It should've run now.</blockquote>
+      <p>
+        But as I wrote my website, the need to manually update the UI and
+        redefine components took away from writing the site.
+      </p>
+      <p>
+        And so it was created after an afternoon JavaScript experiment. A
+        framework for people who just want to write simple websites with a
+        smattering of JavaScript, and without having to <em>build</em> things
+        that probably might not.
+      </p>
+    </section>
+
+    <!-- Quote Douglas Crockford -->
+    <section class="block">
+      <h2 style="background-color: var(--green)">
+        Douglas Crockford on the XML of today
+      </h2>
+      <p>
+        These are excerpts from the CoRecursive podcast on
+        <a
+          href="https://corecursive.com/json-vs-xml-douglas-crockford/"
+          target="_blank"
+          rel="noreferrer"
+          >JSON vs XML</a
+        >.
+      </p>
+      <blockquote>
+        It’s probably the JavaScript frameworks. They have gotten so big and so
+        weird. People seem to love them. I don’t understand why.
+      </blockquote>
+      <p>And on web APIs.</p>
+      <blockquote>
+        ...the browsers have actually gotten pretty good. The web standards
+        thing have finally worked, and the web API is stable pretty much. Some
+        of it’s still pretty stupid, but it works and it’s reliable.
+      </blockquote>
+
+      <p>
+        Read the transcript on
+        <a
+          href="https://corecursive.com/json-vs-xml-douglas-crockford/#javascript-frameworks"
+          target="_blank"
+          rel="noreferrer"
+          >CoRecursive</a
+        >.
+      </p>
+    </section>
+
+    <footer class="blank-block">
+      <p>
+        <a
+          href="https://18alan.space/posts/how-hard-is-it-to-build-a-frontend-framework.html"
+          target="_blank"
+          rel="noreferrer"
+          >How it works</a
+        >
+        ·
+        <a
+          href="https://github.com/18alantom/strawberry/blob/main/website/index.html"
+          target="_blank"
+          rel="noreferrer"
+          >Website code</a
+        >
+      </p>
+      <p>
+        Made with
+        <img
+          src="assets/heart.png"
+          style="width: 22px; height: 22px; margin-bottom: -5px"
+        />
+        by
+        <a href="https://twitter.com/18alantom" target="_blank" rel="noreferrer"
+          >Alan</a
+        >
+      </p>
+      <p>©2023</p>
+    </footer>
+  </body>
+</html>
