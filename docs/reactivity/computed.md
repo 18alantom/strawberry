@@ -116,7 +116,8 @@ data.users[1].isOldEnough; // true
 
 ## Function can be returned from computed functions
 
-If your computed function returns a function then it is returned as it is.
+If your computed function returns a function then it is returned as it is, i.e.
+without being called like a computed value.
 
 ```javascript
 function onClickHandler() {
