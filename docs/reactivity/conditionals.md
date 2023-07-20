@@ -4,6 +4,12 @@ This page is about the details of Strawberry's conditional directives `sb-if`
 and `sb-ifnot`. If you haven't checked the [Getting Started](../getting_started.md)
 and the [Reactivity](./README.md) pages, I'd suggest doing so first.
 
+**Index**
+
+1. [Conditional Rendering](#conditional-rendering)
+2. [Hidden default state](#hidden-default-state)
+3. [Conditionally Rendering Lists](#conditionally-rendering-lists)
+
 ## Conditional Rendering
 
 When you want to show or hide an element on the basis of some data value, you

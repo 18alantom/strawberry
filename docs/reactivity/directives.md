@@ -10,6 +10,15 @@ In Strawberry things (i.e. `x`) are done by using **directives**. For example:
 
 Directives can be used to extend the functionality of strawberry.
 
+**Index**
+
+1. [Directive is a function](#directive-is-a-function)
+2. [Directive is called on data change](#directive-is-called-on-data-change)
+3. [Directives can be registered using `sb.directive`](#directives-can-be-registered-using-sbdirective)
+4. [Example: Two-way binding using a directive](#example-two-way-binding-using-a-directive)
+5. [Directives can have parameters](#directives-can-have-parameters)
+6. [Example: Event listeners using a directive](#example-event-listeners-using-a-directive)
+
 ## Directive is a function
 
 You can add all sorts of additional functionality to Strawberry by using

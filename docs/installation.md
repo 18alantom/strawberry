@@ -2,6 +2,11 @@
 
 There are a couple of ways you can setup Strawberry
 
+**Index**
+
+1. [Strawberry Starter](#strawberry-starter)
+2. [Self Setup](#self-setup)
+
 ## Strawberry Starter
 
 The quickest way to get started is to run this command:

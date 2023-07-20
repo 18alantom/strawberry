@@ -13,6 +13,15 @@ Here, `c` is a function that returns a computed value. The function has two
 variable dependencies `a` and `b` i.e. when either of them change, the value of
 `c()` also changes.
 
+**Index**
+
+1. [Computed values are functions](#computed-values-are-functions)
+2. [Elements can be marked by computed values](#elements-can-be-marked-by-computed-values)
+3. [Computed functions can use `this`](#computed-functions-can-use-this)
+4. [Functions can be returned from computed functions](#function-can-be-returned-from-computed-functions)
+5. [Computed functions can be async](#computed-functions-can-be-async)
+6. [Additional points regarding computed](#additional-points-regarding-computed)
+
 ## Computed values are functions
 
 In Strawberry computed values are obtained by setting functions on the reactive object:
@@ -126,7 +135,7 @@ function onClickHandler() {
 
 data.handler = () => onClickHandler;
 
-typeof data.handler === 'function' // evaluates to true
+typeof data.handler === 'function'; // evaluates to true
 ```
 
 This is useful for associating a function with an element. For instance by

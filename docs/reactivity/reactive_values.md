@@ -4,6 +4,13 @@ This page is about values that can be set on the reactive object.
 If you haven't checked the [Getting Started](../getting_started.md)
 and the [Reactivity](./README.md) pages, I'd suggest doing so first.
 
+**Index**
+
+1. [The Reactive Object](#the-reactive-object)
+2. [Objects and Arrays](#objects-and-arrays)
+3. [Functions](#functions)
+4. [Directive keys](#directive-keys)
+
 ## The Reactive Object
 
 The value received when `sb.init` is the reactive object.
