@@ -2,27 +2,64 @@
 
 This page lists the available strawberry directives and exported methods.
 
-1. Directives
-   1. [`sb-mark`](#sb-mark)
-   2. [`sb-if`](#sb-if)
-   3. [`sb-ifnot`](#sb-ifnot)
-2. Methods
-   1. [`init`](#init)
-   2. [`directive`](#directive)
-   3. [`watch`](#watch)
-   4. [`unwatch`](#unwatch)
-   5. [`register`](#register)
-   6. [`load`](#load)
-   7. [`prefix`](#prefix)
-   8. [`getValue`](#getvalue)
+1. **Directives**: set on elements `<tag sb-directive="key"></tag>`
+   1. [`sb-mark`](#sb-mark): mark element as reactive.
+   2. [`sb-if`](#sb-if): render element if data is truthy.
+   3. [`sb-ifnot`](#sb-ifnot): render element if data is falsy.
+2. **Methods**: called from the global `sb` object.
+   1. [`init`](#init): initialize strawberry.
+   2. [`directive`](#directive): register a custom directive.
+   3. [`watch`](#watch): watch data for changes.
+   4. [`unwatch`](#unwatch): stop watching data for changes.
+   5. [`register`](#register): register custom components.
+   6. [`load`](#load): load components from external files.
+   7. [`prefix`](#prefix): change prefix `"sb"` to a custom value.
 
 ## Directives
 
+Note this section is mentioned only completeness. for a more detailed
+information on the items in this section check out the documentation on
+[reactivity](./reactivity/README.md).
+
 ### `sb-mark`
+
+[Detailed documentation](./reactivity/mark.md)
+
+Used to mark an element with a key which will allow the element to be updated
+when the respective data changes.
+
+```html
+<p sb-mark="message">...</p>
+<script>
+  data.message = 'Hello, World';
+</script>
+```
 
 ### `sb-if`
 
+[Detailed documentation](./reactivity/conditionals.md)
+
+Used to render an element when the respective data value is truthy.
+
+```html
+<p sb-if="show">Hello, World!</p>
+<script>
+  data.show = true;
+</script>
+```
+
 ### `sb-ifnot`
+
+[Detailed documentation](./reactivity/conditionals.md)
+
+Used to render an element when the respective data value is falsy.
+
+```html
+<p sb-ifnot="show">Hello, World!</p>
+<script>
+  data.show = false;
+</script>
+```
 
 ## Methods
 
@@ -162,7 +199,90 @@ sb.unwatch('a.b');
 
 ### `register`
 
+```typescript
+function register(): void;
+function register(parentElement: HTMLElement): void;
+function register(template: string): void;
+function register(templateString: string[], ...args: unknown): void;
+```
+
+Used to register custom components in Strawberry. These components can be
+defined dynamically after a document has completed loading.
+
+It can be called in multiple ways:
+
+1.  **Without args**: This will register all the components found in html
+    document.
+
+    ```javascript
+    sb.register();
+    ```
+
+2.  **Passing the parent element**: This will register all the components found
+    inside the passed `parentElement`.
+
+    ```javascript
+    sb.register(parentElement);
+    ```
+
+3.  **As a tag function**: This allows for dynamically creating templates with
+    interpolated values and expressions.
+
+    ```javascript
+    sb.register`
+         <template name="colored-p">
+           <p style="font-family: sans-serif; color: ${color};">
+             <slot />
+           </p>
+         </template>`;
+    ```
+
+4.  **Passing the component string**: Functionally, it is the same as using it
+    as a tagged function.
+    ```javascript
+    sb.register(`<template name="colored-p">
+           <p style="font-family: sans-serif; color: ${color};">
+             <slot />
+           </p>
+         </template>`);
+    ```
+
+> **Warning**
+>
+> Once an element has been registered by a particular name, it cannot be
+> re-registered, `sb-register` will skip over registered elements and only
+> register the ones that have not been registered.
+
+> **Info**
+>
+> If your components have been defined statically before the document finished
+> loading (i.e. before `document.readyState` becomes `"interactive"`) then you
+> don't need to call `sb.register`.
+
 ### `load`
+
+```typescript
+function load(files: string | string[]): Promise<void>;
+```
+
+- `files`: Path to a single file from the calling folder or a list of files.
+
+Used to load components from external files. For example if you have the
+following folder structure:
+
+```
+.
+├── index.html
+└── components.html
+```
+
+Where `index.html` is your main HTML file that will be served, and
+`components.html` contains your templates. You can load the components in
+`index.html` using `sb.load` like so:
+
+```javascript
+sb.load('components.html');
+```
 
 ### `prefix`
 
