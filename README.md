@@ -70,7 +70,7 @@ curl -so- https://raw.githubusercontent.com/18alantom/strawberry/main/setup.sh |
 Or if you wanna just use it straight away, copy this 👇 script tag in the head of your html file:
 
 ```html
-<script src="https://unpkg.com/sberry@0.0.2-alpha.0/dist/sb.min.js"></script>
+<script src="https://unpkg.com/sberry@0.0.3-alpha.0/dist/sb.min.js"></script>
 ```
 
 ## Features
@@ -79,7 +79,7 @@ Here're are a few of its features:
 
 1. **Reactivity**: change your data and the UI updates.
 2. **Composability**: create and use components.
-3. **Build-free**: doesn't require a build-step. Link or [copy the lib](https://unpkg.com/sberry@0.0.2-alpha.0/dist/sb.min.js) and you're ready to go.
+3. **Build-free**: doesn't require a build-step. Link or [copy the lib](https://unpkg.com/sberry@0.0.3-alpha.0/dist/sb.min.js) and you're ready to go.
 4. **Zero Dependencies**: has no dependencies. Uses WebAPIs for everything.
 5. **Tiny**: [source code](https://github.com/18alantom/strawberry/blob/main/index.ts) is under 1000 CLOC.
 6. **No VDOM**: directly updates the DOM.

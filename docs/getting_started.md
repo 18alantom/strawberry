@@ -5,7 +5,7 @@ Let's start with a simple example, I'll explain what's going on after I show you
 ```html
 <!-- 1. Link Strawberry -->
 <head>
-  <script src="https://unpkg.com/sberry@0.0.2-alpha.0/dist/sb.min.js"></script>
+  <script src="https://unpkg.com/sberry@0.0.3-alpha.0/dist/sb.min.js"></script>
 </head>
 
 <!-- 2. Define a Component -->
