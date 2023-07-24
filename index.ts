@@ -1123,7 +1123,15 @@ function registerComponent(template: HTMLTemplateElement) {
     constructor() {
       super();
       const shadowRoot = this.attachShadow({ mode: 'open' });
-      for (const ch of template.content.children) {
+      for (const style of document.getElementsByTagName('style')) {
+        shadowRoot.appendChild(style.cloneNode(true));
+      }
+
+      for (const link of document.querySelectorAll('link[rel="stylesheet"]')) {
+        shadowRoot.appendChild(link.cloneNode(true));
+      }
+
+      for (const ch of template.content.childNodes) {
         if (!ch) {
           continue;
         }

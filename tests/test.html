@@ -38,7 +38,7 @@
       data.y = () => data.x + 5;
       test(data.y === 15, 'y (computed) set on data');
 
-      const rp = document.createElement('red-p').shadowRoot?.children[0];
+      const rp = document.createElement('red-p').shadowRoot?.lastElementChild
       test(rp instanceof HTMLParagraphElement, 'el red-p has p shadowRoot');
       test(rp.style.color === 'red', 'red-p has style.color red');
 
@@ -72,7 +72,7 @@
       test(gp === undefined, 'green-p not registered');
 
       sb.register();
-      gp = document.createElement('green-p').shadowRoot?.children[0];
+      gp = document.createElement('green-p').shadowRoot?.lastElementChild;
       test(gp instanceof HTMLParagraphElement, 'el green-p has p shadowRoot');
       test(gp.style.color === 'green', 'green-p has style.color green');
     </script>
@@ -258,7 +258,7 @@
     </div-user>
     <script>
       const du1 = document.getElementById('du1');
-      const du1div = du1.shadowRoot.children[0];
+      const du1div = du1.shadowRoot.lastElementChild;
       test(du1div instanceof HTMLDivElement, 'el#du1 has shadowRoot div');
 
       const du1h1 = du1div.children[0];

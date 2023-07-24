@@ -10,9 +10,8 @@ Zero-dependency, build-free framework for the artisanal web.
 
 > **Warning**
 >
-> Strawberry is in a very experimental phase; pre-alpha. Everything stated below
-> works, but I am still figuring out the quickest and cleanest ways of doing
-> things.
+> Strawberry is in an experimental phase. Everything stated below works, but I
+> am still figuring out the quickest and cleanest ways of doing things.
 
 ---
 
