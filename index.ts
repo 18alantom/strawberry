@@ -1205,7 +1205,7 @@ export function unwatch(key?: string, watcher?: Watcher): void {
  * Returns reactive data object if sb.init has been called, else
  * returns null.
  */
-export function data(): typeof globalData {
+export function rdo(): typeof globalData {
   return globalData;
 }
 

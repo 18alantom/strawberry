@@ -34,7 +34,7 @@
       test(typeof sb.watch === 'function', 'sb.watch is function');
       test(typeof sb.unwatch === 'function', 'sb.unwatch is function');
       test(typeof sb.register === 'function', 'sb.register is function');
-      test(data === sb.data(), 'sb returns same data');
+      test(data === sb.rdo(), 'sb returns same data');
 
       data.x = 10;
       test(data.x === 10, 'x (value) set on data');
@@ -53,7 +53,7 @@
     <p id="1" sb-mark="a">notset</p>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       const p1 = document.getElementById('1');
       test(p1.isConnected, 'p#1 connected');
@@ -76,7 +76,7 @@
     </template>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       let gp = document.createElement('green-p').shadowRoot?.lastElementChild;
       test(gp instanceof HTMLParagraphElement, 'el green-p has p shadowRoot');
@@ -87,7 +87,7 @@
     <green-p id="3" sb-mark="j">green</green-p>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       const p2 = document.getElementById('2');
       const p3 = document.getElementById('3');
@@ -119,7 +119,7 @@
     </template>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       test(document.getElementById('4') === null, 'p#4 not found');
 
@@ -154,7 +154,7 @@
     <p id="5" sb-mark="b">notset</p>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       const p5 = document.getElementById('5');
       test(p5.innerText === 'notset', 'p#5 data not set');
@@ -229,7 +229,7 @@
     </div>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       const l1 = document.getElementById('l1');
       test(l1.childElementCount === 1, 'div#l1 has one child');
@@ -273,7 +273,7 @@
     </div-user>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       const du1 = document.getElementById('du1');
       const du1div = du1.shadowRoot.lastElementChild;
@@ -336,7 +336,7 @@
     </div>
     <script type="module">
       import * as sb from 'sb';
-      const data = sb.data();
+      const data = sb.rdo();
 
       const d1 = document.getElementById('d1');
       data.users = [];
@@ -392,8 +392,8 @@
     </div>
 
     <script type="module">
-      import * as sb from 'sb';
-      const data = sb.data();
+      import { rdo } from 'sb';
+      const data = rdo();
 
       const items = document.getElementById('inv-items');
       data.qtys = {};
