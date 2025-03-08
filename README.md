@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+>
+> After nearly 2 years of no commits. I've decided to archive Strawberry.
+> Should you be curious enough to wonder why, here's a post on [why it started, why it stopped, any why the decision was made](https://18alan.space/posts/archiving-strawberry.html).
+
 <div align="center" markdown="1">
 
 <img src="https://github.com/18alantom/strawberry/assets/29507195/9cb6a348-3b02-4de7-be62-ee85cf594871" alt="strawberry logo" width="720"/>
