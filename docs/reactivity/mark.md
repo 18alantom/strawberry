@@ -165,3 +165,12 @@ If removing elements from the DOM is not what you intend to happen, you can inst
 > Array items on the other hand can be deleted `delete data.list[0]` but this is
 > not recommended as it will lead to incorrect sequences of keys, instead use 
 > array operations such as `splice`, `pop`, or `shift`.
+
+> **Note**: **Deleting Values in Modules**
+>
+> When using Strawberry as an ESM import. i.e `<script type="module">` deleting
+> a value in the script will cause elements marked with the value bot
+> **before and after** the script tag to be deleted.
+> 
+> This is because module execution is
+> [deferred](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules#other_differences_between_modules_and_standard_scripts).

@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "dev": "esbuild ./index.ts --bundle --format=iife --global-name=sb --watch --outfile=index.js",
+    "dev-esm": "esbuild ./index.ts --bundle --format=esm --global-name=sb --watch --outfile=index.esm.js",
     "dist": "./dist.sh",
     "pub": "tsc && yarn dist && yarn publish --access public && ./postpub.sh"
   },

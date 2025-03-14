@@ -14,6 +14,7 @@ This page lists the available strawberry directives and exported methods.
    5. [`register`](#register): register custom components.
    6. [`load`](#load): load components from external files.
    7. [`prefix`](#prefix): change prefix `"sb"` to a custom value.
+   8. [`rdo`](#rdo): returns the reactive data object if initialized.
 
 ## Directives
 
@@ -300,4 +301,37 @@ if you want to use data attributes to manage directives you can do this:
   sb.prefix('data-sb');
 </script>
 <p data-sb-mark="message"></p>
+```
+
+### `rdo`
+
+```typescript
+function rdo(): ReactiveObject | null;
+```
+
+Returns the **r**eactive **d**ata **o**bject if Strawberry has been initialized using
+[`sb.init`](#init).
+
+Useful for when Strawberry is being use as an ESM import where global state is
+not shared across module scripts. Example:
+
+```html
+<script type="module">
+  import { init, rdo } from 'sb';
+  
+  rdo() === null; // evaluates to true
+
+  // Module 1: Initialize Strawberry
+  const data = init();
+  
+  rdo() === data; // evaluates to true
+</script>
+
+<script type="module">
+  import { rdo } from 'sb';
+
+  // Module 2: Get data from `rdo` after init
+  // in Module 1.
+  const data = rdo();
+</script>
 ```
