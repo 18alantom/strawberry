@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sb Test - General</title>
-    <script src="../index.js"></script>
-    <link rel="stylesheet" href="test.css" />
-    <script src="./test.js"></script>
+    <title>Sb Test (ESM) - General</title>
+    <link rel="stylesheet" href="../test.css" />
+    <script src="../test.js"></script>
+    <script type="importmap">
+      { "imports": { "sb": "../../index.esm.js" } }
+    </script>
   </head>
   <template name="red-p">
     <p style="color: red">
@@ -16,21 +18,23 @@
   </template>
   <body>
     <main>
-      <h1>General</h1>
+      <h1>General (ESM)</h1>
       <div>
         <p>Success: <span id="success">0</span></p>
         <p>Failure: <span id="failure">0</span></p>
         <p>Total: <span id="total">0</span></p>
       </div>
     </main>
-    <script>
-      test(typeof sb === 'object', 'sb is function');
+
+    <script type="module">
+      import * as sb from 'sb';
+      test(typeof sb === 'object', 'sb is an object');
 
       const data = sb.init();
       test(typeof sb.watch === 'function', 'sb.watch is function');
       test(typeof sb.unwatch === 'function', 'sb.unwatch is function');
       test(typeof sb.register === 'function', 'sb.register is function');
-      test(data === sb.init(), 'sb returns same data');
+      test(data === sb.rdo(), 'sb returns same data');
 
       data.x = 10;
       test(data.x === 10, 'x (value) set on data');
@@ -38,7 +42,7 @@
       data.y = () => data.x + 5;
       test(data.y === 15, 'y (computed) set on data');
 
-      const rp = document.createElement('red-p').shadowRoot?.lastElementChild
+      const rp = document.createElement('red-p').shadowRoot?.lastElementChild;
       test(rp instanceof HTMLParagraphElement, 'el red-p has p shadowRoot');
       test(rp.style.color === 'red', 'red-p has style.color red');
 
@@ -47,7 +51,10 @@
     </script>
 
     <p id="1" sb-mark="a">notset</p>
-    <script>
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
+
       const p1 = document.getElementById('1');
       test(p1.isConnected, 'p#1 connected');
       test(p1.innerText === 'notset', 'p#1 data not set');
@@ -67,47 +74,53 @@
         <slot />
       </p>
     </template>
-    <script>
-      let gp = document.createElement('green-p').shadowRoot?.children[0];
-      test(gp === undefined, 'green-p not registered');
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
 
-      sb.register();
-      gp = document.createElement('green-p').shadowRoot?.lastElementChild;
+      let gp = document.createElement('green-p').shadowRoot?.lastElementChild;
       test(gp instanceof HTMLParagraphElement, 'el green-p has p shadowRoot');
       test(gp.style.color === 'green', 'green-p has style.color green');
     </script>
 
-    <red-p id="2" sb-mark="a">red</red-p>
-    <green-p id="3" sb-mark="b">green</green-p>
-    <script>
+    <red-p id="2" sb-mark="i">red</red-p>
+    <green-p id="3" sb-mark="j">green</green-p>
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
+
       const p2 = document.getElementById('2');
       const p3 = document.getElementById('3');
+
       test(p2.tagName.toLowerCase() === 'red-p', 'p#2 is red-p');
-      test(p3.tagName.toLowerCase() === 'green-p', 'p#3 is red-p');
+      test(p3.tagName.toLowerCase() === 'green-p', 'p#3 is green-p');
       test(p2.innerText === 'red', 'p#2 data not set');
       test(p3.innerText === 'green', 'p#3 data not set');
 
-      data.a = 'RED';
-      data.b = 'GREEN';
+      data.i = 'RED';
+      data.j = 'GREEN';
       test(p2.innerText === 'RED', 'p#2 data set');
       test(p3.innerText === 'GREEN', 'p#3 data set');
 
-      data.b = () => data.a.toLowerCase();
+      data.j = () => data.i.toLowerCase();
       test(p3.innerText === 'red', 'p#3 data computed');
 
-      data.a = 'GREEN';
+      data.i = 'GREEN';
       test(p3.innerText === 'green', 'p#3 data set from computed');
 
-      delete data.a;
+      delete data.i;
       test(!p2.isConnected, 'p#2 not connected');
-      delete data.b;
+      delete data.j;
       test(!p3.isConnected, 'p#3 not connected');
     </script>
 
     <template sb-if="a">
       <p id="4">temp</p>
     </template>
-    <script>
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
+
       test(document.getElementById('4') === null, 'p#4 not found');
 
       data.a = false;
@@ -139,7 +152,10 @@
     </script>
 
     <p id="5" sb-mark="b">notset</p>
-    <script>
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
+
       const p5 = document.getElementById('5');
       test(p5.innerText === 'notset', 'p#5 data not set');
       data.a = 'stuff';
@@ -211,7 +227,10 @@
     <div id="l1">
       <red-p sb-mark="l1.#"></red-p>
     </div>
-    <script>
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
+
       const l1 = document.getElementById('l1');
       test(l1.childElementCount === 1, 'div#l1 has one child');
 
@@ -247,16 +266,15 @@
         <p><slot name="age" /></p>
       </div>
     </template>
-    <script>
-      sb.register();
-    </script>
 
-    <!-- user mark applied for deletion -->
     <div-user id="du1" sb-mark="user">
       <span slot="name" sb-mark="user.name"></span>
       <span slot="age" sb-mark="user.age"></span>
     </div-user>
-    <script>
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
+
       const du1 = document.getElementById('du1');
       const du1div = du1.shadowRoot.lastElementChild;
       test(du1div instanceof HTMLDivElement, 'el#du1 has shadowRoot div');
@@ -316,7 +334,10 @@
         <span slot="age" sb-mark="users.#.age"></span>
       </div-user>
     </div>
-    <script>
+    <script type="module">
+      import * as sb from 'sb';
+      const data = sb.rdo();
+
       const d1 = document.getElementById('d1');
       data.users = [];
       test(d1.children.length === 1, 'el#d1 has one child');
@@ -359,7 +380,8 @@
       </p>
     </template>
 
-    <script>
+    <script type="module">
+      import * as sb from 'sb';
       sb.register();
     </script>
 
@@ -369,7 +391,10 @@
       </inv-item>
     </div>
 
-    <script>
+    <script type="module">
+      import { rdo } from 'sb';
+      const data = rdo();
+
       const items = document.getElementById('inv-items');
       data.qtys = {};
 
